@@ -30,7 +30,28 @@ export class AuthService {
 
     // 🔒 BLOQUEO DE SEGURIDAD: Solo puede existir el cuidador definido por Seed
     if (dto.role === 'CUIDADOR') {
-      throw new UnauthorizedException('El registro de nuevos cuidadores está desactivado.');
+      throw new UnauthorizedException('El registro de nuevos cuidadores está desactivado. Usa las credenciales por defecto.');
+    }
+
+    // 🛡️ REQUISITO PARA PACIENTES: Deben tener un código de cuidador
+    let caregiver: any = null;
+    if (dto.role === 'PACIENTE') {
+      if (!dto.caregiverCode) {
+        throw new ConflictException('Los pacientes deben proporcionar un código de cuidador para registrarse.');
+      }
+
+      caregiver = await (this.prisma.user as any).findUnique({
+        where: { sharingCode: dto.caregiverCode.toUpperCase() },
+        include: { patients: true }
+      });
+
+      if (!caregiver) {
+        throw new ConflictException('El código de cuidador ingresado no es válido.');
+      }
+
+      if (caregiver.patients.length >= 2) {
+        throw new ConflictException('Este cuidador ya tiene el límite de pacientes alcanzado (Máximo 2).');
+      }
     }
 
     const hashed = await bcrypt.hash(dto.password, 10);
@@ -46,6 +67,18 @@ export class AuthService {
         gender: dto.gender,
       },
     });
+
+    // 🔗 VINCULACIÓN AUTOMÁTICA SI ES PACIENTE
+    if (dto.role === 'PACIENTE' && caregiver) {
+      await (this.prisma.patient as any).create({
+        data: {
+          name: user.name,
+          userId: user.id,
+          caregiverId: caregiver.id,
+          gender: user.gender,
+        },
+      });
+    }
 
     return await this.buildAuthResponse(user);
   }
@@ -105,6 +138,9 @@ export class AuthService {
   // SET ROLE
   // ===============================
   async setRole(userId: number, role: Role) {
+    if (role === 'CUIDADOR') {
+      throw new UnauthorizedException('No puedes asignarte el rol de cuidador.');
+    }
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data: { role },

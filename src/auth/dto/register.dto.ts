@@ -17,4 +17,7 @@ export class RegisterDto {
 
   @IsOptional()
   gender?: string;
+
+  @IsOptional()
+  caregiverCode?: string;
 }
