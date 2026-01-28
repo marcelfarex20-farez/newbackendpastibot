@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 
 // Prisma (base de datos)
 import { PrismaModule } from './prisma/prisma.module';
@@ -20,6 +21,11 @@ import { InvitationsModule } from './invitations/invitations.module';
   imports: [
     // Base de datos y Prisma
     PrismaModule,
+
+    // Configuración de variables de entorno
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
 
     // Autenticación (login, registro, OAuth, JWT)
     AuthModule,
@@ -45,4 +51,4 @@ import { InvitationsModule } from './invitations/invitations.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

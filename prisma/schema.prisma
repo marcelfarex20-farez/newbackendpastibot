@@ -20,6 +20,7 @@ model User {
   
   role       Role?      // 👈 AHORA ES OPCIONAL
   gender     String?
+  phone      String?    @default("") // 👈 AGREGADO
   bio        String?    @default("")
   photoUrl   String?    @default("")
   
@@ -42,6 +43,7 @@ model Patient {
   age         Int?
   gender      String?
   condition   String?    @default("")
+  emergencyPhone String?
   caregiver   User?      @relation("CaregiverPatients", fields: [caregiverId], references: [id])
   caregiverId Int?
   

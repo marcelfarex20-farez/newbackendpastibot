@@ -21,7 +21,8 @@ export class UserService {
                 email: true,
                 photoUrl: true,
                 gender: true,
-                bio: true
+                bio: true,
+                phone: true // 👈 AGREGADO
               }
             }
           }

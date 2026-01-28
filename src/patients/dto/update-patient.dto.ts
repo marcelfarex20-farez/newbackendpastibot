@@ -20,4 +20,8 @@ export class UpdatePatientDto {
   @IsOptional()
   @IsString()
   condition?: string;
+
+  @IsOptional()
+  @IsString()
+  emergencyPhone?: string;
 }
