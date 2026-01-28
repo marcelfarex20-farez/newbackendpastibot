@@ -10,7 +10,23 @@ async function bootstrap() {
   app.use(express.urlencoded({ limit: '15mb', extended: true }));
 
   app.enableCors({
-    origin: true,
+    origin: (origin, callback) => {
+      // Permitir: localhost (dev), Railway (prod), y Capacitor (mobile)
+      const allowedOrigins = [
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'https://pastibot-fronted.vercel.app', // Ejemplo si usas vercel
+        /^capacitor:\/\/localhost$/,
+        /^http:\/\/localhost$/,
+        'https://pastibotbackend-production.up.railway.app'
+      ];
+
+      if (!origin || allowedOrigins.some(o => typeof o === 'string' ? o === origin : o.test(origin))) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   });
 
