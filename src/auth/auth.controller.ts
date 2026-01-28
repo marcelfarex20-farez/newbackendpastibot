@@ -43,6 +43,19 @@ export class AuthController {
   }
 
   // =====================================================
+  // FIREBASE SYNC (Native)
+  // =====================================================
+  @Post('firebase-login')
+  async firebaseLogin(@Body('idToken') idToken: string) {
+    return this.authService.firebaseLogin(idToken);
+  }
+
+  @Post('firebase-register')
+  async firebaseRegister(@Body() dto: any) {
+    return this.authService.firebaseRegister(dto);
+  }
+
+  // =====================================================
   // GOOGLE LOGIN
   // =====================================================
   @Get('google')

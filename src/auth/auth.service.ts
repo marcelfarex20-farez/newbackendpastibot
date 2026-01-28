@@ -262,6 +262,92 @@ export class AuthService {
     return { message: 'Contraseña actualizada correctamente' };
   }
 
+  // ===============================
+  // FIREBASE LOGIN (Sync)
+  // ===============================
+  async firebaseLogin(idToken: string) {
+    try {
+      const decoded = await this.firebaseService.verifyIdToken(idToken);
+      const email = decoded.email;
+
+      if (!email) throw new UnauthorizedException('El token de Firebase no contiene un correo válido.');
+
+      let user = await this.prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (!user) {
+        // Si no existe, lo creamos automáticamente como PACIENTE por defecto
+        // o lanzamos un error si preferimos registro explícito.
+        // Siguiendo la lógica de Echobeat, solemos crearlo si es social.
+        user = await this.prisma.user.create({
+          data: {
+            name: decoded.name || email.split('@')[0],
+            email,
+            provider: decoded.firebase?.sign_in_provider || 'google',
+            verified: true,
+            role: 'PACIENTE', // Rol por defecto
+          },
+        });
+      }
+
+      return await this.buildAuthResponse(user);
+    } catch (err) {
+      console.error('❌ Error en firebaseLogin:', err);
+      throw new UnauthorizedException('Autenticación de Firebase fallida');
+    }
+  }
+
+  // ===============================
+  // FIREBASE REGISTER (Sync)
+  // ===============================
+  async firebaseRegister(dto: { idToken: string; name: string; role: Role; gender?: string; caregiverCode?: string }) {
+    try {
+      const decoded = await this.firebaseService.verifyIdToken(dto.idToken);
+      const email = decoded.email;
+
+      if (!email) throw new UnauthorizedException('Token inválido');
+
+      const exists = await this.prisma.user.findUnique({ where: { email } });
+      if (exists) return await this.firebaseLogin(dto.idToken);
+
+      // 🛡️ REQUISITO PARA PACIENTES
+      let caregiver: any = null;
+      if (dto.role === 'PACIENTE' && dto.caregiverCode) {
+        caregiver = await (this.prisma.user as any).findUnique({
+          where: { sharingCode: dto.caregiverCode.toUpperCase() },
+        });
+      }
+
+      const user = await this.prisma.user.create({
+        data: {
+          name: dto.name || decoded.name || email.split('@')[0],
+          email,
+          provider: decoded.firebase?.sign_in_provider || 'google',
+          verified: true,
+          role: dto.role,
+          gender: dto.gender,
+        },
+      });
+
+      if (dto.role === 'PACIENTE' && caregiver) {
+        await (this.prisma.patient as any).create({
+          data: {
+            name: user.name,
+            userId: user.id,
+            caregiverId: caregiver.id,
+            gender: user.gender,
+          },
+        });
+      }
+
+      return await this.buildAuthResponse(user);
+    } catch (err) {
+      console.error('❌ Error en firebaseRegister:', err);
+      throw err;
+    }
+  }
+
   private generateResetToken(): string {
     return [...Array(32)].map(() => Math.random().toString(36)[2]).join('');
   }

@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
+  console.log('🚀 Pastibot Backend iniciando bootstrap...');
   const app = await NestFactory.create(AppModule);
 
   // 📸 Aumentar límite de carga para fotos de medicina (Base64)

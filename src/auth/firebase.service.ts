@@ -4,7 +4,7 @@ import * as admin from 'firebase-admin';
 @Injectable()
 export class FirebaseService implements OnModuleInit {
     onModuleInit() {
-        this.ensureInitialized();
+        console.log('📦 FirebaseService cargado (Estará listo cuando se use)');
     }
 
     private ensureInitialized() {
@@ -75,6 +75,19 @@ export class FirebaseService implements OnModuleInit {
             return token;
         } catch (error) {
             console.error('❌ Error en createCustomToken:', error);
+            throw error;
+        }
+    }
+
+    async verifyIdToken(idToken: string) {
+        if (!this.ensureInitialized()) {
+            throw new Error('Firebase Admin no pudo ser inicializado. Revisa las variables de entorno en Railway.');
+        }
+
+        try {
+            return await admin.auth().verifyIdToken(idToken);
+        } catch (error) {
+            console.error('❌ Error verificando ID Token de Firebase:', error);
             throw error;
         }
     }
