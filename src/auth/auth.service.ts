@@ -295,15 +295,20 @@ export class AuthService {
     }
 
     // 🚀 GENERAR FIREBASE CUSTOM TOKEN
-    // Usamos el email como UID de Firebase para consistencia
-    const firebaseToken = await this.firebaseService.createCustomToken(fullUser.email, {
-      role: fullUser.role,
-      dbId: fullUser.id
-    });
+    let firebaseToken: string | undefined = undefined;
+    try {
+      // Usamos el email como UID de Firebase para consistencia
+      firebaseToken = await this.firebaseService.createCustomToken(fullUser.email, {
+        role: fullUser.role,
+        dbId: fullUser.id
+      });
+    } catch (e) {
+      console.error('❌ Falló la generación del Token de Firebase:', e);
+    }
 
     return {
       accessToken: this.signToken(fullUser),
-      firebaseToken, // 👈 Se envía al frontend
+      firebaseToken, // 👈 Se envía al frontend (puede ser undefined si falla)
       user: fullUser,
     };
   }
