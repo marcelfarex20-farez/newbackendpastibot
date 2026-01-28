@@ -54,8 +54,12 @@ export class AuthController {
   async googleRedirect(@Req() req: any, @Res() res: Response) {
     const auth = await this.authService.loginFromOAuth(req.user);
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8100';
+
+    // Permite "com.pastibot.app" -> "com.pastibot.app://social-success"
+    const redirectBase = frontendUrl.includes('://') ? frontendUrl : `${frontendUrl}://`;
+
     return res.redirect(
-      `${frontendUrl}/social-success?token=${auth.accessToken}`,
+      `${redirectBase}social-success?token=${auth.accessToken}`,
     );
   }
 
@@ -71,8 +75,10 @@ export class AuthController {
   async facebookRedirect(@Req() req: any, @Res() res: Response) {
     const auth = await this.authService.loginFromOAuth(req.user);
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8100';
+    const redirectBase = frontendUrl.includes('://') ? frontendUrl : `${frontendUrl}://`;
+
     return res.redirect(
-      `${frontendUrl}/social-success?token=${auth.accessToken}`,
+      `${redirectBase}social-success?token=${auth.accessToken}`,
     );
   }
 
@@ -88,8 +94,10 @@ export class AuthController {
   async xRedirect(@Req() req: any, @Res() res: Response) {
     const auth = await this.authService.loginFromOAuth(req.user);
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8100';
+    const redirectBase = frontendUrl.includes('://') ? frontendUrl : `${frontendUrl}://`;
+
     return res.redirect(
-      `${frontendUrl}/social-success?token=${auth.accessToken}`,
+      `${redirectBase}social-success?token=${auth.accessToken}`,
     );
   }
 
