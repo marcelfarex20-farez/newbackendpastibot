@@ -73,44 +73,4 @@ export class GroqService {
         }
     }
 
-    /**
-     * Transcribe un archivo de audio usando GROQ Whisper
-     * @param filePath - Ruta al archivo de audio temporal
-     * @returns Texto transcrito
-     */
-    async transcribe(filePath: string): Promise<string> {
-        try {
-            this.logger.log(`🎙️ Transcribiendo audio: ${filePath}`);
-
-            const transcription = await this.groq.audio.transcriptions.create({
-                file: fs.createReadStream(filePath),
-                model: 'whisper-large-v3',
-                prompt: 'El audio es sobre salud, medicina o uso de la aplicación Pastibot.',
-                response_format: 'text',
-                language: 'es',
-                temperature: 0.0,
-            });
-
-            this.logger.log(`✅ Transcripción completada: ${transcription}`);
-            return transcription as unknown as string;
-        } catch (error: any) {
-            this.logger.error('❌ Error al transcribir audio con GROQ:', error.message || error);
-            if (error.response) {
-                this.logger.error('Data error GROQ:', error.response.data);
-            }
-            throw new Error(`Error en Whisper: ${error.message || 'Desconocido'}`);
-        } finally {
-            // Eliminar el archivo temporal después de procesarlo
-            try {
-                if (fs.existsSync(filePath)) {
-                    fs.unlinkSync(filePath);
-                    this.logger.log(`🗑️ Archivo temporal eliminado: ${filePath}`);
-                } else {
-                    this.logger.warn(`⚠️ El archivo no existe para ser eliminado: ${filePath}`);
-                }
-            } catch (e) {
-                this.logger.warn('⚠️ No se pudo eliminar el archivo temporal:', e);
-            }
-        }
-    }
 }

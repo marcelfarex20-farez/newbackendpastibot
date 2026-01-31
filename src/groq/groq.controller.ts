@@ -36,36 +36,4 @@ export class GroqController {
         }
     }
 
-    @Post('transcribe')
-    @UseInterceptors(FileInterceptor('audio', {
-        storage: diskStorage({
-            destination: join(process.cwd(), 'uploads'),
-            filename: (req, file, cb) => {
-                const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
-                return cb(null, `${randomName}${extname(file.originalname)}`);
-            }
-        })
-    }))
-    async transcribe(@UploadedFile() file: Express.Multer.File) {
-        try {
-            this.logger.log(`🎙️ Solicitud de transcripción recibida`);
-
-            if (!file) {
-                return { success: false, error: 'No se recibió ningún archivo de audio' };
-            }
-
-            const text = await this.groqService.transcribe(file.path);
-
-            return {
-                success: true,
-                text,
-            };
-        } catch (error: any) {
-            this.logger.error('❌ Error en endpoint de transcripción:', error.message || error);
-            return {
-                success: false,
-                error: `No se pudo transcribir el audio: ${error.message || 'Error del servidor'}`,
-            };
-        }
-    }
 }

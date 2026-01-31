@@ -119,15 +119,46 @@ export class PatientsService {
   }
 
   async updatePatientOwnProfile(userId: number, dto: UpdatePatientDto) {
-    const patient = await (this.prisma.patient as any).findUnique({
+    let patient = await (this.prisma.patient as any).findUnique({
       where: { userId }
     });
 
+    // Si no existe, lo creamos (UPSERT lógico) para soportar usuarios de Google
     if (!patient) {
-      throw new NotFoundException('Perfil de paciente no encontrado para este usuario.');
+      console.log(`[PROFILE FIX] Creando perfil de paciente faltante para User ${userId}`);
+
+      const user = await (this.prisma.user as any).findUnique({
+        where: { id: userId }
+      });
+
+      if (!user) throw new NotFoundException('Usuario no encontrado');
+
+      // Creamos el perfil de paciente
+      // Nota: No tendrá cuidador asignado (caregiverId: null) hasta que se vincule
+      patient = await (this.prisma.patient as any).create({
+        data: {
+          userId: user.id,
+          name: dto.name || user.name, // Usar nombre del DTO o del usuario
+          email: user.email,
+          gender: dto.gender || user.gender,
+          age: dto.age,
+          condition: dto.condition,
+          emergencyPhone: dto.emergencyPhone
+        }
+      });
+
+      // Si se envió género, actualizamos también al usuario base
+      if (dto.gender && dto.gender !== user.gender) {
+        await (this.prisma.user as any).update({
+          where: { id: userId },
+          data: { gender: dto.gender }
+        });
+      }
+
+      return patient;
     }
 
-    // Actualizamos el paciente
+    // Si ya existía, actualización normal
     const updatedPatient = await (this.prisma.patient as any).update({
       where: { id: patient.id },
       data: dto,
