@@ -171,14 +171,28 @@ export class AuthService {
 
     // Vincular automáticamente si es paciente
     if (role === 'PACIENTE' && caregiver) {
-      await (this.prisma.patient as any).create({
-        data: {
-          name: updated.name,
-          userId: updated.id,
-          caregiverId: caregiver.id,
-          gender: updated.gender,
-        }
+      // 🐛 BUGFIX: Verificar si ya existe perfil para no fallar
+      const existingProfile = await (this.prisma.patient as any).findUnique({
+        where: { userId: updated.id }
       });
+
+      if (existingProfile) {
+        // Si ya tiene perfil, solo lo actualizamos con el nuevo cuidador
+        await (this.prisma.patient as any).update({
+          where: { id: existingProfile.id },
+          data: { caregiverId: caregiver.id }
+        });
+      } else {
+        // Si no existe, lo creamos
+        await (this.prisma.patient as any).create({
+          data: {
+            name: updated.name,
+            userId: updated.id,
+            caregiverId: caregiver.id,
+            gender: updated.gender,
+          }
+        });
+      }
     }
 
     return await this.buildAuthResponse(updated);
