@@ -81,9 +81,13 @@ export class PatientsService {
       include: { patientProfile: true }
     });
 
+    // 🐛 CHANGE: Si ya existe perfil, LO ACTUALIZAMOS en lugar de fallar
     if (user.patientProfile) {
-      console.error(`[LINKING ERROR] Usuario ${userId} ya está vinculado`);
-      throw new BadRequestException('Ya tienes un perfil de paciente vinculado.');
+      console.log(`[LINKING FIX] Usuario ${userId} ya tiene perfil. Actualizando cuidador a ${caregiver.id}`);
+      return (this.prisma.patient as any).update({
+        where: { id: user.patientProfile.id },
+        data: { caregiverId: caregiver.id }
+      });
     }
 
     console.log(`[LINKING SUCCESS] Creando perfil para ${user.name} bajo el mando de ${caregiver.name}`);
@@ -159,9 +163,27 @@ export class PatientsService {
     }
 
     // Si ya existía, actualización normal
+
+    // 🛡️ PROTECT: Separate caregiverCode from primitive fields to avoid Prisma error
+    const { ...cleanDto } = dto as any;
+    delete cleanDto.caregiverCode;
+
+    // Handle caregiverCode manually if provided
+    let extraData = {};
+    if ((dto as any).caregiverCode) {
+      const code = (dto as any).caregiverCode.toUpperCase();
+      const caregiver = await (this.prisma.user as any).findUnique({ where: { sharingCode: code } });
+      if (caregiver) {
+        extraData = { caregiverId: caregiver.id };
+      }
+    }
+
     const updatedPatient = await (this.prisma.patient as any).update({
       where: { id: patient.id },
-      data: dto,
+      data: {
+        ...cleanDto,
+        ...extraData
+      },
     });
 
     // También actualizamos el género en el User si viene en el DTO
