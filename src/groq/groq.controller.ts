@@ -1,5 +1,7 @@
 import { Controller, Post, Body, UseGuards, Logger, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
 import { GroqService } from './groq.service';
 import { ChatDto } from './dto/chat.dto';
 import { JwtAuthGuard } from '../auth/jwt.guard';
@@ -35,7 +37,15 @@ export class GroqController {
     }
 
     @Post('transcribe')
-    @UseInterceptors(FileInterceptor('audio'))
+    @UseInterceptors(FileInterceptor('audio', {
+        storage: diskStorage({
+            destination: join(process.cwd(), 'uploads'),
+            filename: (req, file, cb) => {
+                const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
+                return cb(null, `${randomName}${extname(file.originalname)}`);
+            }
+        })
+    }))
     async transcribe(@UploadedFile() file: Express.Multer.File) {
         try {
             this.logger.log(`🎙️ Solicitud de transcripción recibida`);
@@ -50,11 +60,11 @@ export class GroqController {
                 success: true,
                 text,
             };
-        } catch (error) {
-            this.logger.error('❌ Error en endpoint de transcripción:', error);
+        } catch (error: any) {
+            this.logger.error('❌ Error en endpoint de transcripción:', error.message || error);
             return {
                 success: false,
-                error: 'No se pudo transcribir el audio. Por favor, intenta de nuevo.',
+                error: `No se pudo transcribir el audio: ${error.message || 'Error del servidor'}`,
             };
         }
     }

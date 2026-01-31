@@ -93,15 +93,20 @@ export class GroqService {
 
             this.logger.log(`✅ Transcripción completada: ${transcription}`);
             return transcription as unknown as string;
-        } catch (error) {
-            this.logger.error('❌ Error al transcribir audio con GROQ:', error);
-            throw new Error('No se pudo procesar el audio');
+        } catch (error: any) {
+            this.logger.error('❌ Error al transcribir audio con GROQ:', error.message || error);
+            if (error.response) {
+                this.logger.error('Data error GROQ:', error.response.data);
+            }
+            throw new Error(`Error en Whisper: ${error.message || 'Desconocido'}`);
         } finally {
             // Eliminar el archivo temporal después de procesarlo
             try {
                 if (fs.existsSync(filePath)) {
                     fs.unlinkSync(filePath);
                     this.logger.log(`🗑️ Archivo temporal eliminado: ${filePath}`);
+                } else {
+                    this.logger.warn(`⚠️ El archivo no existe para ser eliminado: ${filePath}`);
                 }
             } catch (e) {
                 this.logger.warn('⚠️ No se pudo eliminar el archivo temporal:', e);
