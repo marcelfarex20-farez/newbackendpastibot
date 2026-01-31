@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Groq from 'groq-sdk';
+import * as fs from 'fs';
 
 @Injectable()
 export class GroqService {
@@ -69,6 +70,42 @@ export class GroqService {
         } catch (error) {
             this.logger.error('❌ Error al comunicarse con GROQ:', error);
             throw new Error('No se pudo obtener respuesta del asistente de IA');
+        }
+    }
+
+    /**
+     * Transcribe un archivo de audio usando GROQ Whisper
+     * @param filePath - Ruta al archivo de audio temporal
+     * @returns Texto transcrito
+     */
+    async transcribe(filePath: string): Promise<string> {
+        try {
+            this.logger.log(`🎙️ Transcribiendo audio: ${filePath}`);
+
+            const transcription = await this.groq.audio.transcriptions.create({
+                file: fs.createReadStream(filePath),
+                model: 'whisper-large-v3',
+                prompt: 'El audio es sobre salud, medicina o uso de la aplicación Pastibot.',
+                response_format: 'text',
+                language: 'es',
+                temperature: 0.0,
+            });
+
+            this.logger.log(`✅ Transcripción completada: ${transcription}`);
+            return transcription as unknown as string;
+        } catch (error) {
+            this.logger.error('❌ Error al transcribir audio con GROQ:', error);
+            throw new Error('No se pudo procesar el audio');
+        } finally {
+            // Eliminar el archivo temporal después de procesarlo
+            try {
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                    this.logger.log(`🗑️ Archivo temporal eliminado: ${filePath}`);
+                }
+            } catch (e) {
+                this.logger.warn('⚠️ No se pudo eliminar el archivo temporal:', e);
+            }
         }
     }
 }
