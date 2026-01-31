@@ -37,8 +37,6 @@ export class MedicinesService {
     // ✅ Crear medicina con recordatorios en transacción
     const times = dto.times || (dto.time ? [dto.time] : []);
 
-
-
     const result = await this.prisma.$transaction(async (tx) => {
       const medicine = await tx.medicine.create({
         data: {
@@ -92,9 +90,9 @@ export class MedicinesService {
       const user = await this.prisma.user.findUnique({ where: { id: userId } });
       const caregiver = await this.prisma.user.findUnique({ where: { id: caregiverId } });
 
-      if (user?.fcmToken) {
+      if ((user as any)?.fcmToken) {
         await this.firebaseService.sendPushNotification(
-          user.fcmToken,
+          (user as any).fcmToken,
           "📋 Nueva Receta Actualizada",
           `Tu cuidador ${caregiver?.name || 'Pastibot'} ha agregado ${medicineName} a tu calendario.`
         );

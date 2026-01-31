@@ -41,6 +41,6 @@ import { GoogleAuthGuard } from './google.guard';
     // CUSTOM GUARDS
     GoogleAuthGuard,
   ],
-  exports: [AuthService],
+  exports: [AuthService, FirebaseService],
 })
 export class AuthModule { }
