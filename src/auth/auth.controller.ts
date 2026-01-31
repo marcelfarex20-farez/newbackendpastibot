@@ -133,6 +133,15 @@ export class AuthController {
   }
 
   // =====================================================
+  // 🔔 GUARDAR TOKEN FCM (Notificaciones)
+  // =====================================================
+  @Post('update-fcm')
+  @UseGuards(JwtAuthGuard)
+  async updateFcmToken(@Req() req: any, @Body('token') token: string) {
+    return this.authService.updateFcmToken(req.user.id, token);
+  }
+
+  // =====================================================
   // FORGOT PASSWORD
   // =====================================================
   @Post('forgot-password')

@@ -25,6 +25,7 @@ model User {
   photoUrl   String?    @default("")
   
   sharingCode String?    @unique // 👈 Código único del cuidador para sus pacientes
+  fcmToken    String?    // 🔔 Token para notificaciones push (FCM)
   
   patients   Patient[]  @relation("CaregiverPatients")
   invitations Invitation[] // ✅ LÍNEA AGREGADA

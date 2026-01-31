@@ -422,4 +422,15 @@ export class AuthService {
       provider: user.provider,
     });
   }
+
+  // ===============================
+  // UPDATE FCM TOKEN
+  // ===============================
+  async updateFcmToken(userId: number, token: string) {
+    console.log(`🔔 Actualizando FCM Token para User ${userId}: ${token?.substring(0, 10)}...`);
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { fcmToken: token },
+    });
+  }
 }

@@ -91,4 +91,27 @@ export class FirebaseService implements OnModuleInit {
             throw error;
         }
     }
+
+    // 🚀 NUEVO: Enviar Notificación Push
+    async sendPushNotification(token: string, title: string, body: string, data?: any) {
+        if (!this.ensureInitialized()) return;
+
+        try {
+            const message = {
+                notification: {
+                    title,
+                    body,
+                },
+                data: data || {},
+                token: token,
+            };
+
+            const response = await admin.messaging().send(message);
+            console.log('🔔 Notificación enviada con éxito:', response);
+            return response;
+        } catch (error) {
+            console.error('❌ Error enviando notificación:', error);
+            // No lanzamos error para no interrumpir el flujo principal
+        }
+    }
 }

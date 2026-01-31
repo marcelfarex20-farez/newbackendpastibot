@@ -3,9 +3,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateMedicineDto } from './dto/create-medicine.dto';
 import { UpdateMedicineDto } from './dto/update-medicine.dto';
 
+import { FirebaseService } from '../auth/firebase.service';
+
 @Injectable()
 export class MedicinesService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private firebaseService: FirebaseService
+  ) { }
 
   // -------------------------------
   // Crear medicina para un paciente
@@ -32,7 +37,9 @@ export class MedicinesService {
     // ✅ Crear medicina con recordatorios en transacción
     const times = dto.times || (dto.time ? [dto.time] : []);
 
-    return this.prisma.$transaction(async (tx) => {
+
+
+    const result = await this.prisma.$transaction(async (tx) => {
       const medicine = await tx.medicine.create({
         data: {
           name: dto.name,
@@ -69,10 +76,32 @@ export class MedicinesService {
         where: { id: medicine.id },
         include: { reminders: true },
       });
-    }).catch(err => {
-      console.error("❌ ERROR EN TRANSACCIÓN DE MEDICINA:", err);
-      throw new BadRequestException("No se pudo guardar la medicina: " + err.message);
     });
+
+    // 🚀 NOTIFICAR AL PACIENTE
+    if (result && patient.userId) {
+      this.notifyPatient(patient.userId, dto.name, caregiverId);
+    }
+
+    return result;
+  }
+
+  // 🔔 Helper para notificar
+  async notifyPatient(userId: number, medicineName: string, caregiverId: number) {
+    try {
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      const caregiver = await this.prisma.user.findUnique({ where: { id: caregiverId } });
+
+      if (user?.fcmToken) {
+        await this.firebaseService.sendPushNotification(
+          user.fcmToken,
+          "📋 Nueva Receta Actualizada",
+          `Tu cuidador ${caregiver?.name || 'Pastibot'} ha agregado ${medicineName} a tu calendario.`
+        );
+      }
+    } catch (e) {
+      console.error("Error enviando notificación push:", e);
+    }
   }
 
   // -------------------------------
