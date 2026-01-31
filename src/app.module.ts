@@ -16,6 +16,7 @@ import { MedicinesModule } from './medicines/medicines.module';
 import { RemindersModule } from './reminders/reminders.module';
 import { RobotModule } from './robot/robot.module';
 import { InvitationsModule } from './invitations/invitations.module';
+import { GroqModule } from './groq/groq.module';
 
 @Module({
   imports: [
@@ -47,6 +48,9 @@ import { InvitationsModule } from './invitations/invitations.module';
 
     // Invitaciones (agregado)
     InvitationsModule,
+
+    // GROQ AI Assistant
+    GroqModule,
   ],
   controllers: [AppController],
   providers: [AppService],
