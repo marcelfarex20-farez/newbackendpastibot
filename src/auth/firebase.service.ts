@@ -104,6 +104,11 @@ export class FirebaseService implements OnModuleInit {
                 },
                 data: data || {},
                 token: token,
+                android: {
+                    notification: {
+                        sound: 'default'
+                    }
+                }
             };
 
             const response = await admin.messaging().send(message);
