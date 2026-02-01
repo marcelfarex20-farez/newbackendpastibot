@@ -44,22 +44,9 @@ export class RobotService {
           caregiverId: user.id,
           robotSerialNumber: { notIn: [null, ""] }
         },
-        select: { robotSerialNumber: true, name: true }
+        select: { robotSerialNumber: true }
       });
       targetSerial = patientWithRobot?.robotSerialNumber;
-
-      // ✅ LOG PARA DEBUG (Se puede ver en la App -> Historial)
-      if (targetSerial) {
-        await (this.prisma as any).robotLog.create({
-          data: {
-            serialNumber: targetSerial,
-            message: `[DEBUG] Inferido robot ${targetSerial} para cuidador ${user.name} (ID: ${user.id}) desde paciente ${patientWithRobot.name}`
-          }
-        });
-      } else {
-        // Log de error de inferencia
-        console.log(`[DEBUG ERROR] No se pudo inferir robot para cuidador ID: ${user.id}`);
-      }
     }
 
     if (!targetSerial) return null;
