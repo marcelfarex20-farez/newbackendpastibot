@@ -230,10 +230,11 @@ export class RobotService implements OnModuleInit {
    * Útil para pruebas o dispensación manual.
    */
   async requestDispenseSlot(dto: DispenseSlotDto, serialNumber: string) {
+    const targetSerial = serialNumber || 'esp32pastibot';
     // Crear la tarea en la cola directamente con el slot
     const task = await (this.prisma as any).dispensationTask.create({
       data: {
-        serialNumber: serialNumber,
+        serialNumber: targetSerial,
         slot: dto.slot,
         status: 'PENDING',
       },
@@ -242,12 +243,12 @@ export class RobotService implements OnModuleInit {
     // Log del robot
     await (this.prisma as any).robotLog.create({
       data: {
-        message: `Dispensación manual: Carril ${dto.slot} activado`,
+        message: `🤖 MANUAL-SLOT: Carril ${dto.slot} activado para robot ${targetSerial}`,
       },
     });
 
     // 🚀 NOTIFICAR AL FRONTEND VIA WEBSOCKETS
-    this.robotGateway.broadcastTaskUpdate(serialNumber, {
+    this.robotGateway.broadcastTaskUpdate(targetSerial, {
       type: 'SLOT_DISPENSE',
       slot: dto.slot,
       status: 'PENDING',
@@ -257,7 +258,7 @@ export class RobotService implements OnModuleInit {
     return {
       ok: true,
       taskId: task.id,
-      message: `Carril ${dto.slot} será dispensado en breve.`,
+      message: `Carril ${dto.slot} del robot ${targetSerial} será dispensado en breve.`,
     };
   }
 

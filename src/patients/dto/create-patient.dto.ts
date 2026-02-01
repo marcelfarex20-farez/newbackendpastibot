@@ -20,4 +20,8 @@ export class CreatePatientDto {
   @IsOptional()
   @IsString()
   condition?: string;
+
+  @IsOptional()
+  @IsString()
+  robotSerialNumber?: string;
 }

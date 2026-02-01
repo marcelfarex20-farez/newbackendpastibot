@@ -24,4 +24,8 @@ export class UpdatePatientDto {
   @IsOptional()
   @IsString()
   emergencyPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  robotSerialNumber?: string;
 }
