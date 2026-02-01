@@ -36,16 +36,20 @@ export class RobotService implements OnModuleInit {
     this.logger.debug(`⏰ Chequeando medicinas para las ${currentHHmm} (${currentDay})...`);
 
     // Buscar todas las medicinas que tengan slot y cuya hora coincida
-    const medicinesToDispense = await this.prisma.medicine.findMany({
+    const allMedicinesAtThisTime = await this.prisma.medicine.findMany({
       where: {
         slot: { not: null },
         time: currentHHmm,
-        days: { has: currentDay }
       },
       include: {
         patient: true
       }
     });
+
+    // Filtrar manualmente por día (case-insensitive)
+    const medicinesToDispense = allMedicinesAtThisTime.filter(med =>
+      med.days.some((day: string) => day.toUpperCase() === currentDay)
+    );
 
     for (const med of medicinesToDispense) {
       if (!med.patient?.robotSerialNumber) continue;
