@@ -266,6 +266,7 @@ export class RobotService implements OnModuleInit {
    * Retornamos solo la tarea más antigua para facilitar el parseado en C++.
    */
   async getPendingTasks(serialNumber: string) {
+    // 1. Buscar la tarea más antigua que esté PENDING
     const task = await (this.prisma as any).dispensationTask.findFirst({
       where: {
         serialNumber,
@@ -275,6 +276,21 @@ export class RobotService implements OnModuleInit {
     });
 
     if (!task) return {}; // Retornar objeto vacío si no hay tareas
+
+    // 2. 🛡️ IMPORTANTE: Marcarla como 'PROCESSING' inmediatamente
+    // Esto evita que si el ESP32 se resetea por una caída de tensión (brownout),
+    // vuelva a pedir la misma tarea y dispense dos veces.
+    await (this.prisma as any).dispensationTask.update({
+      where: { id: task.id },
+      data: { status: 'PROCESSING' }
+    });
+
+    // Notificar al frontend que el robot empezó a trabajar
+    this.robotGateway.broadcastTaskUpdate(serialNumber, {
+      taskId: task.id,
+      status: 'PROCESSING',
+      slot: task.slot
+    });
 
     return {
       taskId: task.id,
