@@ -42,7 +42,10 @@ export class RobotService {
       const patientWithRobot = await (this.prisma as any).patient.findFirst({
         where: {
           caregiverId: user.id,
-          robotSerialNumber: { notIn: [null, ""] }
+          NOT: [
+            { robotSerialNumber: null },
+            { robotSerialNumber: "" }
+          ]
         },
         select: { robotSerialNumber: true }
       });
