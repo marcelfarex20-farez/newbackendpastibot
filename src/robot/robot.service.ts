@@ -61,6 +61,21 @@ export class RobotService {
       },
     });
 
+    if (!state) return null;
+
+    // 🕒 VERIFICAR SI ESTÁ OFFLINE (Ej: más de 30 segundos sin reportar)
+    const now = new Date();
+    const lastUpdate = new Date(state.updatedAt);
+    const secondsSinceLastUpdate = (now.getTime() - lastUpdate.getTime()) / 1000;
+
+    if (secondsSinceLastUpdate > 30) {
+      return {
+        ...state,
+        status: 'OFFLINE',
+        wifi: false
+      };
+    }
+
     return state;
   }
 
