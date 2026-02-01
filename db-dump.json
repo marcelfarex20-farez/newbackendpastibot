@@ -73,74 +73,74 @@
   ],
   "states": [
     {
-      "id": 155,
-      "serial": "esp32pastibot",
-      "batt": 0,
-      "temp": 5.679011875,
-      "updated": "2026-02-01T16:05:17.663Z"
-    },
-    {
-      "id": 154,
+      "id": 233,
       "serial": "esp32pastibot",
       "batt": 0,
       "temp": 11.85185115,
-      "updated": "2026-02-01T16:04:51.851Z"
+      "updated": "2026-02-01T20:35:14.225Z"
     },
     {
-      "id": 153,
+      "id": 232,
       "serial": "esp32pastibot",
       "batt": 0,
       "temp": 11.85185115,
-      "updated": "2026-02-01T16:03:51.744Z"
+      "updated": "2026-02-01T20:34:42.800Z"
     },
     {
-      "id": 152,
+      "id": 231,
       "serial": "esp32pastibot",
       "batt": 0,
       "temp": 11.85185115,
-      "updated": "2026-02-01T16:02:52.561Z"
+      "updated": "2026-02-01T20:34:11.247Z"
     },
     {
-      "id": 151,
+      "id": 230,
       "serial": "esp32pastibot",
       "batt": 0,
       "temp": 11.85185115,
-      "updated": "2026-02-01T16:02:01.976Z"
+      "updated": "2026-02-01T20:33:40.220Z"
     },
     {
-      "id": 150,
+      "id": 229,
       "serial": "esp32pastibot",
       "batt": 0,
       "temp": 11.85185115,
-      "updated": "2026-02-01T16:01:01.759Z"
+      "updated": "2026-02-01T20:33:08.682Z"
     },
     {
-      "id": 149,
+      "id": 228,
       "serial": "esp32pastibot",
       "batt": 0,
       "temp": 11.85185115,
-      "updated": "2026-02-01T16:00:00.930Z"
+      "updated": "2026-02-01T20:32:37.039Z"
     },
     {
-      "id": 148,
+      "id": 227,
+      "serial": "esp32pastibot",
+      "batt": 0,
+      "temp": 10,
+      "updated": "2026-02-01T20:32:05.331Z"
+    },
+    {
+      "id": 226,
       "serial": "esp32pastibot",
       "batt": 0,
       "temp": 11.85185115,
-      "updated": "2026-02-01T15:59:00.726Z"
+      "updated": "2026-02-01T20:31:33.763Z"
     },
     {
-      "id": 147,
+      "id": 225,
       "serial": "esp32pastibot",
       "batt": 0,
       "temp": 11.85185115,
-      "updated": "2026-02-01T15:58:02.569Z"
+      "updated": "2026-02-01T20:31:03.667Z"
     },
     {
-      "id": 146,
+      "id": 224,
       "serial": "esp32pastibot",
       "batt": 0,
-      "temp": 1.975309584,
-      "updated": "2026-02-01T15:55:47.708Z"
+      "temp": 11.85185115,
+      "updated": "2026-02-01T20:30:31.800Z"
     }
   ]
 }

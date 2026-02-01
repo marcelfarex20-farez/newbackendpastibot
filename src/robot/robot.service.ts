@@ -8,6 +8,8 @@ import { DispensedDto } from './dto/dispensed.dto';
 import { HttpService } from '@nestjs/axios';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
+import { RobotGateway } from './robot.gateway';
+
 @Injectable()
 export class RobotService implements OnModuleInit {
   onModuleInit() {
@@ -18,6 +20,7 @@ export class RobotService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly httpService: HttpService,
+    private readonly robotGateway: RobotGateway,
   ) { }
 
   /**
@@ -87,6 +90,14 @@ export class RobotService implements OnModuleInit {
       });
 
       this.logger.log(`✅ Tarea automatica generada: ${med.name} (Slot ${med.slot})`);
+
+      // Notificar al frontend vía WebSocket
+      this.robotGateway.broadcastTaskUpdate(med.patient.robotSerialNumber, {
+        type: 'AUTO_DISPENSE',
+        medicine: med.name,
+        slot: med.slot,
+        status: 'PENDING'
+      });
     }
   }
 
@@ -105,6 +116,9 @@ export class RobotService implements OnModuleInit {
         signalStrength: dto.signalStrength,
       },
     });
+
+    // 🚀 NOTIFICAR AL FRONTEND VIA WEBSOCKETS
+    this.robotGateway.broadcastStatusUpdate(dto.serialNumber, state);
 
     return state;
   }
@@ -195,6 +209,15 @@ export class RobotService implements OnModuleInit {
       },
     });
 
+    // 🚀 NOTIFICAR AL FRONTEND VIA WEBSOCKETS
+    this.robotGateway.broadcastTaskUpdate(targetSerial, {
+      type: 'MANUAL_DISPENSE',
+      medicine: medicine.name,
+      slot: medicine.slot,
+      status: 'PENDING',
+      taskId: task.id
+    });
+
     return {
       ok: true,
       taskId: task.id,
@@ -221,6 +244,14 @@ export class RobotService implements OnModuleInit {
       data: {
         message: `Dispensación manual: Carril ${dto.slot} activado`,
       },
+    });
+
+    // 🚀 NOTIFICAR AL FRONTEND VIA WEBSOCKETS
+    this.robotGateway.broadcastTaskUpdate(serialNumber, {
+      type: 'SLOT_DISPENSE',
+      slot: dto.slot,
+      status: 'PENDING',
+      taskId: task.id
     });
 
     return {
@@ -256,10 +287,18 @@ export class RobotService implements OnModuleInit {
    */
   async completeTask(taskId: any) {
     const id = typeof taskId === 'string' ? parseInt(taskId) : taskId;
-    return (this.prisma as any).dispensationTask.update({
+    const res = await (this.prisma as any).dispensationTask.update({
       where: { id },
       data: { status: 'COMPLETED' },
     });
+
+    // 🚀 NOTIFICAR AL FRONTEND VIA WEBSOCKETS
+    this.robotGateway.broadcastTaskUpdate(res.serialNumber, {
+      taskId: res.id,
+      status: 'COMPLETED'
+    });
+
+    return res;
   }
 
   /**
