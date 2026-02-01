@@ -73,11 +73,74 @@
   ],
   "states": [
     {
-      "id": 45,
+      "id": 69,
       "serial": "esp32pastibot",
-      "batt": 95,
-      "temp": 32.5,
-      "updated": "2026-02-01T02:17:31.329Z"
+      "batt": 0,
+      "temp": 11.85185115,
+      "updated": "2026-02-01T02:51:32.770Z"
+    },
+    {
+      "id": 68,
+      "serial": "esp32pastibot",
+      "batt": 0,
+      "temp": 11.85185115,
+      "updated": "2026-02-01T02:50:32.336Z"
+    },
+    {
+      "id": 67,
+      "serial": "esp32pastibot",
+      "batt": 0,
+      "temp": 11.85185115,
+      "updated": "2026-02-01T02:49:31.180Z"
+    },
+    {
+      "id": 66,
+      "serial": "esp32pastibot",
+      "batt": 0,
+      "temp": 11.85185115,
+      "updated": "2026-02-01T02:48:30.297Z"
+    },
+    {
+      "id": 65,
+      "serial": "esp32pastibot",
+      "batt": 0,
+      "temp": 11.85185115,
+      "updated": "2026-02-01T02:47:29.267Z"
+    },
+    {
+      "id": 64,
+      "serial": "esp32pastibot",
+      "batt": 0,
+      "temp": 11.85185115,
+      "updated": "2026-02-01T02:46:28.852Z"
+    },
+    {
+      "id": 63,
+      "serial": "esp32pastibot",
+      "batt": 0,
+      "temp": 11.85185115,
+      "updated": "2026-02-01T02:45:28.335Z"
+    },
+    {
+      "id": 62,
+      "serial": "esp32pastibot",
+      "batt": 0,
+      "temp": 11.85185115,
+      "updated": "2026-02-01T02:44:24.541Z"
+    },
+    {
+      "id": 61,
+      "serial": "esp32pastibot",
+      "batt": 0,
+      "temp": 11.85185115,
+      "updated": "2026-02-01T02:43:25.657Z"
+    },
+    {
+      "id": 60,
+      "serial": "esp32pastibot",
+      "batt": 0,
+      "temp": 11.85185115,
+      "updated": "2026-02-01T02:32:31.217Z"
     }
   ]
 }

@@ -4,6 +4,7 @@ import {
   Get,
   Post,
   Query,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 import { RobotService } from './robot.service';
@@ -33,8 +34,8 @@ export class RobotController {
    */
   @UseGuards(JwtAuthGuard)
   @Get('status')
-  getLatestStatus(@Query('serialNumber') serialNumber: string) {
-    return this.robotService.getLatestStatus(serialNumber);
+  async getLatestStatus(@Request() req, @Query('serialNumber') serialNumber: string) {
+    return this.robotService.getLatestStatus(serialNumber, req.user);
   }
 
   /**

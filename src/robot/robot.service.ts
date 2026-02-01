@@ -34,14 +34,25 @@ export class RobotService {
     return state;
   }
 
-  /**
-   * Devuelve el último estado conocido de UN robot específico
-   */
-  async getLatestStatus(serialNumber: string) {
-    if (!serialNumber) return null;
+  async getLatestStatus(serialNumber?: string, user?: any) {
+    let targetSerial = serialNumber;
+
+    // 🚀 INFERENCIA: Si no hay serial, lo buscamos en los pacientes del usuario
+    if (!targetSerial && user) {
+      const patientWithRobot = await (this.prisma as any).patient.findFirst({
+        where: {
+          caregiverId: user.id,
+          robotSerialNumber: { not: null }
+        },
+        select: { robotSerialNumber: true }
+      });
+      targetSerial = patientWithRobot?.robotSerialNumber;
+    }
+
+    if (!targetSerial) return null;
 
     const state = await (this.prisma as any).robotState.findFirst({
-      where: { serialNumber },
+      where: { serialNumber: targetSerial },
       orderBy: {
         updatedAt: 'desc',
       },
