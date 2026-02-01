@@ -74,7 +74,7 @@ export class RobotService {
     });
 
     // Log del robot
-    await this.prisma.robotLog.create({
+    await (this.prisma as any).robotLog.create({
       data: {
         medicineId: dto.medicineId,
         message: `Orden creada: Mover carrusel a Slot ${medicine.slot} para ${medicine.name}`,
@@ -93,7 +93,7 @@ export class RobotService {
    * Retornamos solo la tarea más antigua para facilitar el parseado en C++.
    */
   async getPendingTasks(serialNumber: string) {
-    const task = await this.prisma.dispensationTask.findFirst({
+    const task = await (this.prisma as any).dispensationTask.findFirst({
       where: {
         serialNumber,
         status: 'PENDING',
@@ -114,7 +114,7 @@ export class RobotService {
    */
   async completeTask(taskId: any) {
     const id = typeof taskId === 'string' ? parseInt(taskId) : taskId;
-    return this.prisma.dispensationTask.update({
+    return (this.prisma as any).dispensationTask.update({
       where: { id },
       data: { status: 'COMPLETED' },
     });
@@ -128,7 +128,7 @@ export class RobotService {
       dto.message ||
       `Robot reporta dispensado medicineId=${dto.medicineId ?? 'N/A'}, amount=${dto.amount ?? 'N/A'}, time=${dto.time ?? 'N/A'}`;
 
-    const log = await this.prisma.robotLog.create({
+    const log = await (this.prisma as any).robotLog.create({
       data: {
         medicineId: dto.medicineId ?? null,
         message,
@@ -142,7 +142,7 @@ export class RobotService {
    * (Opcional) Listar logs del robot
    */
   async getLogs(limit = 20) {
-    return this.prisma.robotLog.findMany({
+    return (this.prisma as any).robotLog.findMany({
       orderBy: {
         createdAt: 'desc',
       },

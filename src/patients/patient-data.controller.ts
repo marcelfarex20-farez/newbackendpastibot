@@ -165,7 +165,7 @@ export class PatientDataController {
                 amount: dto.amount || 1,
             }, patient.robotSerialNumber);
 
-            const log = await this.prisma.dispensationLog.create({
+            const log = await (this.prisma as any).dispensationLog.create({
                 data: {
                     medicineId: dto.medicineId,
                     patientId: patient.id,
@@ -195,7 +195,7 @@ export class PatientDataController {
             throw new BadRequestException('dispensationId es requerido');
         }
 
-        await this.prisma.dispensationLog.update({
+        await (this.prisma as any).dispensationLog.update({
             where: { id: dispensationId },
             data: { status: 'TAKEN' },
         });
@@ -215,7 +215,7 @@ export class PatientDataController {
             throw new BadRequestException('dispensationId y mood son requeridos');
         }
 
-        await this.prisma.dispensationLog.update({
+        await (this.prisma as any).dispensationLog.update({
             where: { id: dispensationId },
             data: { mood },
         });
