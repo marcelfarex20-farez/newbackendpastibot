@@ -33,8 +33,8 @@ export class RobotController {
    */
   @UseGuards(JwtAuthGuard)
   @Get('status')
-  getLatestStatus() {
-    return this.robotService.getLatestStatus();
+  getLatestStatus(@Query('serialNumber') serialNumber: string) {
+    return this.robotService.getLatestStatus(serialNumber);
   }
 
   /**
@@ -44,8 +44,8 @@ export class RobotController {
    */
   @UseGuards(JwtAuthGuard)
   @Post('dispense')
-  requestDispense(@Body() dto: DispenseDto) {
-    return this.robotService.requestDispense(dto);
+  requestDispense(@Body() dto: DispenseDto, @Query('serialNumber') serialNumber: string) {
+    return this.robotService.requestDispense(dto, serialNumber);
   }
 
   /**
@@ -66,6 +66,24 @@ export class RobotController {
   getLogs(@Query('limit') limit?: string) {
     const n = limit ? Number(limit) : 20;
     return this.robotService.getLogs(n);
+  }
+
+  /**
+   * [ESP32 → Backend]
+   * El Robot pide sus TAREAS PENDIENTES.
+   */
+  @Get('tasks')
+  getPendingTasks(@Query('serialNumber') serialNumber: string) {
+    return this.robotService.getPendingTasks(serialNumber);
+  }
+
+  /**
+   * [ESP32 → Backend]
+   * El Robot confirma que terminó una tarea.
+   */
+  @Post('tasks/complete')
+  completeTask(@Body('taskId') taskId: number) {
+    return this.robotService.completeTask(taskId);
   }
 
   /**

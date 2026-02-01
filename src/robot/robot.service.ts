@@ -52,54 +52,72 @@ export class RobotService {
 
   /**
    * El frontend pide dispensar pastillas.
-   * Aquí NestJS llama al ESP32 vía HTTP.
+   * Ahora agregamos la tarea a una COLA (Queue) para que el ESP32 la recoja.
    */
-  async requestDispense(dto: DispenseDto) {
-    const baseUrl = process.env.ESP32_URL || 'http://192.168.0.50';
-
-    // 1. Buscar la medicina para saber su SLOT
+  async requestDispense(dto: DispenseDto, serialNumber: string) {
+    // 1. Buscar la medicina para saber su SLOT (posición del carrusel)
     const medicine = await this.prisma.medicine.findUnique({
       where: { id: dto.medicineId },
     });
 
-    if (!medicine || !medicine.slot) {
-      throw new InternalServerErrorException('Esta medicina no tiene un carril (slot) asignado en el robot.');
+    if (!medicine || medicine.slot === null || medicine.slot === undefined) {
+      throw new InternalServerErrorException('Esta medicina no tiene un carril (slot) asignado.');
     }
 
-    try {
-      // 2. Llamada al ESP32 con el SLOT correcto
-      const response$ = this.http.post(`${baseUrl}/dispense`, {
-        slot: medicine.slot, // 👈 Enviamos el SLOT físico (1-6)
-        amount: dto.amount,
-        medicineName: medicine.name // Opcional: para que el robot lo muestre en pantalla
-      });
+    // 2. Crear la tarea en la cola
+    const task = await this.prisma.dispensationTask.create({
+      data: {
+        serialNumber: serialNumber,
+        slot: medicine.slot,
+        status: 'PENDING',
+      },
+    });
 
-      const response = await firstValueFrom(response$);
+    // Log del robot
+    await this.prisma.robotLog.create({
+      data: {
+        medicineId: dto.medicineId,
+        message: `Orden creada: Mover carrusel a Slot ${medicine.slot} para ${medicine.name}`,
+      },
+    });
 
-      // Guardamos un log simple
-      await this.prisma.robotLog.create({
-        data: {
-          medicineId: dto.medicineId,
-          message: `Dispensando Slot ${medicine.slot} (${medicine.name}) - Amount ${dto.amount}`,
-        },
-      });
+    return {
+      ok: true,
+      taskId: task.id,
+      message: 'Orden enviada al robot con éxito. El robot la procesará en breve.',
+    };
+  }
 
-      return {
-        ok: true,
-        fromEsp32: response.data,
-      };
-    } catch (error) {
-      this.logger.error('Error llamando al ESP32 /dispense', error?.message);
+  /**
+   * El ESP32 llama aquí para saber qué tiene que hacer.
+   * Retornamos solo la tarea más antigua para facilitar el parseado en C++.
+   */
+  async getPendingTasks(serialNumber: string) {
+    const task = await (this.prisma as any).dispensationTask.findFirst({
+      where: {
+        serialNumber,
+        status: 'PENDING',
+      },
+      orderBy: { createdAt: 'asc' },
+    });
 
-      await this.prisma.robotLog.create({
-        data: {
-          medicineId: dto.medicineId,
-          message: `Error al llamar al ESP32: ${error?.message || 'desconocido'}`,
-        },
-      });
+    if (!task) return {}; // Retornar objeto vacío si no hay tareas
 
-      throw new InternalServerErrorException('No se pudo comunicar con el ESP32');
-    }
+    return {
+      taskId: task.id,
+      slot: task.slot
+    };
+  }
+
+  /**
+   * El ESP32 avisa que terminó una tarea específica.
+   */
+  async completeTask(taskId: any) {
+    const id = typeof taskId === 'string' ? parseInt(taskId) : taskId;
+    return (this.prisma as any).dispensationTask.update({
+      where: { id },
+      data: { status: 'COMPLETED' },
+    });
   }
 
   /**

@@ -145,6 +145,16 @@ model DispensationLog {
   dispensedAt DateTime @default(now())
 }
 
+model DispensationTask {
+  id           Int      @id @default(autoincrement())
+  serialNumber String   // A qué robot va dirigida la orden
+  slot         Int      // Qué posición del carrusel mover
+  status       String   @default("PENDING") // PENDING, COMPLETED, FAILED
+  createdAt    DateTime @default(now())
+  
+  @@index([serialNumber, status])
+}
+
 model PasswordReset {
   id        Int      @id @default(autoincrement())
   email     String

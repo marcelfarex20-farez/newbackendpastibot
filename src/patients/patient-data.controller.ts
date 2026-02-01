@@ -152,7 +152,7 @@ export class PatientDataController {
             const result = await this.robotService.requestDispense({
                 medicineId: dto.medicineId,
                 amount: dto.amount || 1,
-            });
+            }, patient.robotSerialNumber);
 
             const log = await this.prisma.dispensationLog.create({
                 data: {
