@@ -107,17 +107,28 @@ export class PatientDataController {
     }
 
     // =====================================================
-    // GET ROBOT STATUS
+    // GET ROBOT STATUS (Visible para el Paciente y su Cuidador)
     // =====================================================
     @Get('robot')
     async getMyRobotStatus(@Req() req: any) {
         const userId = req.user.id;
-        const patient = await (this.prisma.patient as any).findFirst({
-            where: { userId: userId },
-        });
+        const role = req.user.role;
+
+        let patient;
+        if (role === 'PACIENTE') {
+            patient = await (this.prisma.patient as any).findFirst({
+                where: { userId: userId },
+            });
+        } else {
+            // Si es CUIDADOR, buscamos el primer paciente a su cargo para mostrar el robot
+            patient = await (this.prisma.patient as any).findFirst({
+                where: { caregiverId: userId },
+            });
+        }
 
         if (!patient || !patient.robotSerialNumber) {
-            return { status: 'DESCONOCIDO', wifi: false, batteryPct: 0 };
+            // Intentar buscar un estado global si es un demo o no hay vinculación
+            return this.robotService.getLatestStatus("esp32pastibot");
         }
 
         return this.robotService.getLatestStatus(patient.robotSerialNumber);

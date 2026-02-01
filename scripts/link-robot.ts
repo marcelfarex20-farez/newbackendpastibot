@@ -8,7 +8,7 @@ async function main() {
     const patient = await prisma.patient.findFirst();
 
     if (patient) {
-        await prisma.patient.update({
+        await (prisma as any).patient.update({
             where: { id: patient.id },
             data: { robotSerialNumber: serial }
         });

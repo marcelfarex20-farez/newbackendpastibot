@@ -52,7 +52,7 @@ model Patient {
   userId      Int?       @unique
   user        User?      @relation("UserPatientProfile", fields: [userId], references: [id])
   
-  robotSerialNumber String? @unique // 👈 Vincula este paciente a un robot físico
+  robotSerialNumber String? // 👈 Vincula este paciente a un robot físico (Ahora múltiple)
   
   medicines   Medicine[]
 }

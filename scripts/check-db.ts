@@ -1,28 +1,33 @@
 import { PrismaClient } from '@prisma/client';
-
 const prisma = new PrismaClient();
 
-async function main() {
-    const userCount = await prisma.user.count();
-    const patientCount = await prisma.patient.count();
-    const medicineCount = await prisma.medicine.count();
+async function checkDb() {
+    const patients = await prisma.patient.findMany({
+        include: { user: true }
+    });
 
-    console.log(`Users: ${userCount}`);
-    console.log(`Patients: ${patientCount}`);
-    console.log(`Medicines: ${medicineCount}`);
+    console.log("=== PACIENTES ===");
+    console.table(patients.map(p => ({
+        id: p.id,
+        name: p.name,
+        email: p.user?.email,
+        robot: p.robotSerialNumber,
+        caregiverId: p.caregiverId
+    })));
 
-    if (userCount === 0 && patientCount === 0 && medicineCount === 0) {
-        console.log('DATABASE IS CLEAN');
-    } else {
-        console.log('DATABASE STILL HAS DATA');
-    }
+    const states = await prisma.robotState.findMany({
+        orderBy: { updatedAt: 'desc' },
+        take: 5
+    });
+
+    console.log("\n=== ESTADOS DE ROBOT ===");
+    console.table(states.map(s => ({
+        id: s.id,
+        serial: s.serialNumber,
+        batt: s.batteryPct,
+        temp: s.temperature,
+        updated: s.updatedAt
+    })));
 }
 
-main()
-    .catch(e => {
-        console.error(e);
-        process.exit(1);
-    })
-    .finally(async () => {
-        await prisma.$disconnect();
-    });
+checkDb().catch(console.error).finally(() => prisma.$disconnect());

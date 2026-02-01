@@ -19,7 +19,7 @@ export class RobotService {
    * El ESP32 envía su estado actual (batería, wifi, estado)
    */
   async reportStatus(dto: CreateStatusDto) {
-    const state = await this.prisma.robotState.create({
+    const state = await (this.prisma as any).robotState.create({
       data: {
         serialNumber: dto.serialNumber, // 👈 Identificar robot
         status: dto.status,
@@ -40,7 +40,7 @@ export class RobotService {
   async getLatestStatus(serialNumber: string) {
     if (!serialNumber) return null;
 
-    const state = await this.prisma.robotState.findFirst({
+    const state = await (this.prisma as any).robotState.findFirst({
       where: { serialNumber },
       orderBy: {
         updatedAt: 'desc',
@@ -65,7 +65,7 @@ export class RobotService {
     }
 
     // 2. Crear la tarea en la cola
-    const task = await this.prisma.dispensationTask.create({
+    const task = await (this.prisma as any).dispensationTask.create({
       data: {
         serialNumber: serialNumber,
         slot: medicine.slot,
@@ -93,7 +93,7 @@ export class RobotService {
    * Retornamos solo la tarea más antigua para facilitar el parseado en C++.
    */
   async getPendingTasks(serialNumber: string) {
-    const task = await (this.prisma as any).dispensationTask.findFirst({
+    const task = await this.prisma.dispensationTask.findFirst({
       where: {
         serialNumber,
         status: 'PENDING',
@@ -114,7 +114,7 @@ export class RobotService {
    */
   async completeTask(taskId: any) {
     const id = typeof taskId === 'string' ? parseInt(taskId) : taskId;
-    return (this.prisma as any).dispensationTask.update({
+    return this.prisma.dispensationTask.update({
       where: { id },
       data: { status: 'COMPLETED' },
     });
