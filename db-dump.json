@@ -29,20 +29,6 @@
       "role": "PACIENTE"
     },
     {
-      "id": 5,
-      "name": "Joel Benavides",
-      "email": "bjoel1558@gmail.com",
-      "robot": null,
-      "role": "PACIENTE"
-    },
-    {
-      "id": 8,
-      "name": "Anthony Andahir Gonzalez Vera",
-      "email": "anthonyandahirgonzalezvera@gmail.com",
-      "robot": "esp32pastibot",
-      "role": "PACIENTE"
-    },
-    {
       "id": 9,
       "name": "Anthony Andahir Gonzalez Vera",
       "email": "anthonyandahirgonzalezvera18@gmail.com",
@@ -69,78 +55,92 @@
       "email": "anthonyandahir332@gmail.com",
       "robot": "esp32pastibot",
       "role": "PACIENTE"
+    },
+    {
+      "id": 8,
+      "name": "Anthony Andahir Gonzalez Vera",
+      "email": "anthonyandahirgonzalezvera@gmail.com",
+      "robot": "esp32pastibot",
+      "role": "PACIENTE"
+    },
+    {
+      "id": 5,
+      "name": "Joel Benavides",
+      "email": "bjoel1558@gmail.com",
+      "robot": "esp32pastibot",
+      "role": "PACIENTE"
     }
   ],
   "states": [
     {
-      "id": 69,
+      "id": 155,
       "serial": "esp32pastibot",
       "batt": 0,
-      "temp": 11.85185115,
-      "updated": "2026-02-01T02:51:32.770Z"
+      "temp": 5.679011875,
+      "updated": "2026-02-01T16:05:17.663Z"
     },
     {
-      "id": 68,
+      "id": 154,
       "serial": "esp32pastibot",
       "batt": 0,
       "temp": 11.85185115,
-      "updated": "2026-02-01T02:50:32.336Z"
+      "updated": "2026-02-01T16:04:51.851Z"
     },
     {
-      "id": 67,
+      "id": 153,
       "serial": "esp32pastibot",
       "batt": 0,
       "temp": 11.85185115,
-      "updated": "2026-02-01T02:49:31.180Z"
+      "updated": "2026-02-01T16:03:51.744Z"
     },
     {
-      "id": 66,
+      "id": 152,
       "serial": "esp32pastibot",
       "batt": 0,
       "temp": 11.85185115,
-      "updated": "2026-02-01T02:48:30.297Z"
+      "updated": "2026-02-01T16:02:52.561Z"
     },
     {
-      "id": 65,
+      "id": 151,
       "serial": "esp32pastibot",
       "batt": 0,
       "temp": 11.85185115,
-      "updated": "2026-02-01T02:47:29.267Z"
+      "updated": "2026-02-01T16:02:01.976Z"
     },
     {
-      "id": 64,
+      "id": 150,
       "serial": "esp32pastibot",
       "batt": 0,
       "temp": 11.85185115,
-      "updated": "2026-02-01T02:46:28.852Z"
+      "updated": "2026-02-01T16:01:01.759Z"
     },
     {
-      "id": 63,
+      "id": 149,
       "serial": "esp32pastibot",
       "batt": 0,
       "temp": 11.85185115,
-      "updated": "2026-02-01T02:45:28.335Z"
+      "updated": "2026-02-01T16:00:00.930Z"
     },
     {
-      "id": 62,
+      "id": 148,
       "serial": "esp32pastibot",
       "batt": 0,
       "temp": 11.85185115,
-      "updated": "2026-02-01T02:44:24.541Z"
+      "updated": "2026-02-01T15:59:00.726Z"
     },
     {
-      "id": 61,
+      "id": 147,
       "serial": "esp32pastibot",
       "batt": 0,
       "temp": 11.85185115,
-      "updated": "2026-02-01T02:43:25.657Z"
+      "updated": "2026-02-01T15:58:02.569Z"
     },
     {
-      "id": 60,
+      "id": 146,
       "serial": "esp32pastibot",
       "batt": 0,
-      "temp": 11.85185115,
-      "updated": "2026-02-01T02:32:31.217Z"
+      "temp": 1.975309584,
+      "updated": "2026-02-01T15:55:47.708Z"
     }
   ]
 }

@@ -18,6 +18,8 @@ import { RobotModule } from './robot/robot.module';
 import { InvitationsModule } from './invitations/invitations.module';
 import { GroqModule } from './groq/groq.module';
 
+import { ScheduleModule } from '@nestjs/schedule';
+
 @Module({
   imports: [
     // Base de datos y Prisma
@@ -27,6 +29,9 @@ import { GroqModule } from './groq/groq.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+
+    // Tareas programadas
+    ScheduleModule.forRoot(),
 
     // Autenticación (login, registro, OAuth, JWT)
     AuthModule,

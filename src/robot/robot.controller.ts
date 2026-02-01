@@ -6,16 +6,24 @@ import {
   Query,
   Request,
   UseGuards,
+  OnModuleInit,
 } from '@nestjs/common';
 import { RobotService } from './robot.service';
 import { CreateStatusDto } from './dto/create-status.dto';
 import { DispenseDto } from './dto/dispense.dto';
+import { DispenseSlotDto } from './dto/dispense-slot.dto';
+import { UpdateInventoryDto } from './dto/update-inventory.dto';
 import { DispensedDto } from './dto/dispensed.dto';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 
 @Controller('robot')
-export class RobotController {
-  constructor(private readonly robotService: RobotService) { }
+export class RobotController implements OnModuleInit {
+  onModuleInit() {
+    console.log('🤖 RobotController initialized via onModuleInit');
+  }
+  constructor(private readonly robotService: RobotService) {
+    console.log('🤖 RobotController initialized via constructor');
+  }
 
   /**
    * [ESP32 → Backend]
@@ -47,6 +55,16 @@ export class RobotController {
   @Post('dispense')
   requestDispense(@Body() dto: DispenseDto, @Query('serialNumber') serialNumber: string) {
     return this.robotService.requestDispense(dto, serialNumber);
+  }
+
+  /**
+   * [Frontend → Backend → ESP32]
+   * Dispensar directamente por carril (slot) sin necesidad de medicina.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('dispense-slot')
+  requestDispenseSlot(@Body() dto: DispenseSlotDto, @Query('serialNumber') serialNumber: string) {
+    return this.robotService.requestDispenseSlot(dto, serialNumber);
   }
 
   /**
@@ -95,5 +113,21 @@ export class RobotController {
   @Get('schedule')
   getSchedule() {
     return this.robotService.getSchedule();
+  }
+
+  /**
+   * [Frontend → Backend]
+   * Obtener el inventario actual del robot (qué medicina está en cada carril).
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('inventory')
+  getInventory(@Query('serialNumber') serialNumber: string) {
+    return this.robotService.getInventory(serialNumber);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('inventory')
+  updateInventory(@Body() dto: UpdateInventoryDto, @Query('serialNumber') serialNumber: string) {
+    return this.robotService.updateInventorySlot(dto, serialNumber);
   }
 }

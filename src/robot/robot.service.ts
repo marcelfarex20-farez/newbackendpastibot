@@ -1,19 +1,90 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateStatusDto } from './dto/create-status.dto';
 import { DispenseDto } from './dto/dispense.dto';
+import { DispenseSlotDto } from './dto/dispense-slot.dto';
+import { UpdateInventoryDto } from './dto/update-inventory.dto';
 import { DispensedDto } from './dto/dispensed.dto';
 import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
-export class RobotService {
+export class RobotService implements OnModuleInit {
+  onModuleInit() {
+    console.log('🦾 RobotService initialized');
+  }
   private readonly logger = new Logger(RobotService.name);
 
   constructor(
-    private prisma: PrismaService,
-    private http: HttpService,
+    private readonly prisma: PrismaService,
+    private readonly httpService: HttpService,
   ) { }
+
+  /**
+   * Tarea automática: Se ejecuta cada minuto para revisar si toca dar alguna pastilla.
+   */
+  @Cron(CronExpression.EVERY_MINUTE)
+  async handleCron() {
+    const now = new Date();
+    // Obtener hora actual en formato HH:mm (ej: 08:30)
+    const currentHHmm = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+
+    // Obtener día de la semana (LU, MA, MI, JU, VI, SA, DO)
+    const dayNames = ['DO', 'LU', 'MA', 'MI', 'JU', 'VI', 'SA'];
+    const currentDay = dayNames[now.getDay()];
+
+    this.logger.debug(`⏰ Chequeando medicinas para las ${currentHHmm} (${currentDay})...`);
+
+    // Buscar todas las medicinas que tengan slot y cuya hora coincida
+    const medicinesToDispense = await this.prisma.medicine.findMany({
+      where: {
+        slot: { not: null },
+        time: currentHHmm,
+        days: { has: currentDay }
+      },
+      include: {
+        patient: true
+      }
+    });
+
+    for (const med of medicinesToDispense) {
+      if (!med.patient?.robotSerialNumber) continue;
+
+      // Evitar duplicados: Si ya existe una tarea creada en el último minuto para este slot, ignorar
+      const oneMinuteAgo = new Date(now.getTime() - 59000);
+      const existingTask = await (this.prisma as any).dispensationTask.findFirst({
+        where: {
+          serialNumber: med.patient.robotSerialNumber,
+          slot: med.slot,
+          createdAt: { gte: oneMinuteAgo }
+        }
+      });
+
+      if (existingTask) {
+        this.logger.warn(`🚩 Tarea ya creada anteriormente para ${med.name} (Slot ${med.slot})`);
+        continue;
+      }
+
+      // Crear la tarea para el ESP32
+      await (this.prisma as any).dispensationTask.create({
+        data: {
+          serialNumber: med.patient.robotSerialNumber,
+          slot: med.slot,
+          status: 'PENDING',
+        }
+      });
+
+      // Registrar en el log
+      await (this.prisma as any).robotLog.create({
+        data: {
+          medicineId: med.id,
+          message: `⏰ AUTO-DISPENSE: Tarea creada para ${med.name} en carril ${med.slot} (${med.patient.name})`,
+        }
+      });
+
+      this.logger.log(`✅ Tarea automatica generada: ${med.name} (Slot ${med.slot})`);
+    }
+  }
 
   /**
    * El ESP32 envía su estado actual (batería, wifi, estado)
@@ -87,16 +158,26 @@ export class RobotService {
     // 1. Buscar la medicina para saber su SLOT (posición del carrusel)
     const medicine = await this.prisma.medicine.findUnique({
       where: { id: dto.medicineId },
+      include: { patient: true }
     });
 
     if (!medicine || medicine.slot === null || medicine.slot === undefined) {
       throw new InternalServerErrorException('Esta medicina no tiene un carril (slot) asignado.');
     }
 
+    let targetSerial = serialNumber;
+    if (!targetSerial && medicine.patient?.robotSerialNumber) {
+      targetSerial = medicine.patient.robotSerialNumber;
+    }
+
+    if (!targetSerial) {
+      throw new InternalServerErrorException('No se pudo identificar el robot para este paciente.');
+    }
+
     // 2. Crear la tarea en la cola
     const task = await (this.prisma as any).dispensationTask.create({
       data: {
-        serialNumber: serialNumber,
+        serialNumber: targetSerial,
         slot: medicine.slot,
         status: 'PENDING',
       },
@@ -114,6 +195,34 @@ export class RobotService {
       ok: true,
       taskId: task.id,
       message: 'Orden enviada al robot con éxito. El robot la procesará en breve.',
+    };
+  }
+
+  /**
+   * Dispensar directamente por carril (slot) sin necesidad de medicina.
+   * Útil para pruebas o dispensación manual.
+   */
+  async requestDispenseSlot(dto: DispenseSlotDto, serialNumber: string) {
+    // Crear la tarea en la cola directamente con el slot
+    const task = await (this.prisma as any).dispensationTask.create({
+      data: {
+        serialNumber: serialNumber,
+        slot: dto.slot,
+        status: 'PENDING',
+      },
+    });
+
+    // Log del robot
+    await (this.prisma as any).robotLog.create({
+      data: {
+        message: `Dispensación manual: Carril ${dto.slot} activado`,
+      },
+    });
+
+    return {
+      ok: true,
+      taskId: task.id,
+      message: `Carril ${dto.slot} será dispensado en breve.`,
     };
   }
 
@@ -198,6 +307,46 @@ export class RobotService {
     return {
       timestamp: new Date().toISOString(),
       schedule: medicines,
+    };
+  }
+
+  /**
+   * Obtener el inventario actual del robot.
+   */
+  async getInventory(serialNumber: string = 'esp32pastibot') {
+    const inventory = await (this.prisma as any).robotInventory.findMany({
+      where: { serialNumber },
+      orderBy: { slot: 'asc' },
+    });
+
+    return inventory;
+  }
+
+  /**
+   * Actualizar el inventario de un carril específico.
+   */
+  async updateInventorySlot(dto: UpdateInventoryDto, serialNumber: string = 'esp32pastibot') {
+    const inventory = await (this.prisma as any).robotInventory.upsert({
+      where: {
+        serialNumber_slot: {
+          serialNumber,
+          slot: dto.slot,
+        },
+      },
+      update: {
+        medicineName: dto.medicineName,
+      },
+      create: {
+        serialNumber,
+        slot: dto.slot,
+        medicineName: dto.medicineName,
+      },
+    });
+
+    return {
+      ok: true,
+      message: `Carril ${dto.slot} actualizado con ${dto.medicineName}`,
+      inventory,
     };
   }
 }

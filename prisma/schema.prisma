@@ -7,152 +7,143 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Usuario de la app (puede ser cuidador o paciente)
-
 model User {
-  id         Int        @id @default(autoincrement())
-  name       String
-  email      String     @unique
-  password   String?
-  provider   String     @default("email")
-  providerId String?    @unique
-  verified   Boolean    @default(false)
-  
-  role       Role?      // 👈 AHORA ES OPCIONAL
-  gender     String?
-  phone      String?    @default("") // 👈 AGREGADO
-  bio        String?    @default("")
-  photoUrl   String?    @default("")
-  
-  sharingCode String?    @unique // 👈 Código único del cuidador para sus pacientes
-  fcmToken    String?    // 🔔 Token para notificaciones push (FCM)
-  
-  patients   Patient[]  @relation("CaregiverPatients")
-  invitations Invitation[] // ✅ LÍNEA AGREGADA
-  createdAt  DateTime   @default(now())
-  Medicine   Medicine[]
-  patientProfile Patient? @relation("UserPatientProfile")
+  id             Int          @id @default(autoincrement())
+  name           String
+  email          String       @unique
+  password       String?
+  provider       String       @default("email")
+  providerId     String?      @unique
+  verified       Boolean      @default(false)
+  role           Role?
+  gender         String?
+  bio            String?      @default("")
+  photoUrl       String?      @default("")
+  phone          String?      @default("")
+  sharingCode    String?      @unique
+  createdAt      DateTime     @default(now())
+  fcmToken       String?
+  invitations    Invitation[]
+  Medicine       Medicine[]
+  patients       Patient[]    @relation("CaregiverPatients")
+  patientProfile Patient?     @relation("UserPatientProfile")
 }
-
-  
-// Paciente vinculado a un cuidador
 
 model Patient {
-  id          Int        @id @default(autoincrement())
-  name        String
-  email       String?    @unique
-  age         Int?
-  gender      String?
-  condition   String?    @default("")
-  emergencyPhone String?
-  caregiver   User?      @relation("CaregiverPatients", fields: [caregiverId], references: [id])
-  caregiverId Int?
-  
-  linkCode    String?    @unique
-  userId      Int?       @unique
-  user        User?      @relation("UserPatientProfile", fields: [userId], references: [id])
-  
-  robotSerialNumber String? // 👈 Vincula este paciente a un robot físico (Ahora múltiple)
-  
-  medicines   Medicine[]
+  id                Int        @id @default(autoincrement())
+  name              String
+  email             String?    @unique
+  age               Int?
+  gender            String?
+  condition         String?    @default("")
+  caregiverId       Int?
+  linkCode          String?    @unique
+  userId            Int?       @unique
+  emergencyPhone    String?
+  robotSerialNumber String?
+  medicines         Medicine[]
+  caregiver         User?      @relation("CaregiverPatients", fields: [caregiverId], references: [id])
+  user              User?      @relation("UserPatientProfile", fields: [userId], references: [id])
 }
-
-// Medicamento asociado a un paciente
 
 model Medicine {
-  id          Int        @id @default(autoincrement())
-  name        String
-  dosage      String
-  stock       Int?       @default(0)
-  qrData      Json?
-  time        String?         // "08:00"
-  days        String[]         // ["Lu","Ma","Mi"]
-  label       String?          // "Después del almuerzo"
-  slot        Int?             // 👈 Nuevo: Número de motor/carril (1-6)
-  
-  // ✨ NUEVOS CAMPOS AVANZADOS
-  icon        String?          @default("pill") // Nombre del icono (p. ej. "medkit", "water")
-  instructions String?         @default("")     // "Tomar con mucha agua"
-  category    String?          @default("General") // "Analgésico", "Vitamina", etc.
-  stockAlert  Int?             @default(5)      // Avisar cuando queden 5
-  imageUrls   String[]         @default([]) // 👈 URLs o Base64 de las fotos reales (máximo 3)
-  
-  patient     Patient?   @relation(fields: [patientId], references: [id])
-  patientId   Int?
-  caregiver   User?      @relation(fields: [caregiverId], references: [id])
-  caregiverId Int?
-  
-  reminders   Reminder[]
+  id               Int               @id @default(autoincrement())
+  name             String
+  dosage           String
+  stock            Int?              @default(0)
+  qrData           Json?
+  time             String?
+  days             String[]
+  label            String?
+  slot             Int?
+  icon             String?           @default("pill")
+  instructions     String?           @default("")
+  category         String?           @default("General")
+  stockAlert       Int?              @default(5)
+  imageUrls        String[]          @default([])
+  patientId        Int?
+  caregiverId      Int?
+  createdAt        DateTime          @default(now())
   dispensationLogs DispensationLog[]
-  createdAt   DateTime   @default(now())
-}
- 
-model Reminder {
-  id         Int      @id @default(autoincrement())
-  time       String // "08:00 AM"
-  days       String // "Lu,Ma,Mi,Ju,Vi" o "" si es una sola vez
-  label      String? // "Después del almuerzo"
-  repeat     Boolean  @default(true)
-  active     Boolean  @default(true)
-  medicine   Medicine @relation(fields: [medicineId], references: [id])
-  medicineId Int
-  createdAt  DateTime @default(now())
+  caregiver        User?             @relation(fields: [caregiverId], references: [id])
+  patient          Patient?          @relation(fields: [patientId], references: [id])
+  reminders        Reminder[]
 }
 
-// Estado del robot (batería, wifi, etc.)
+model Reminder {
+  id         Int      @id @default(autoincrement())
+  time       String
+  days       String
+  label      String?
+  repeat     Boolean  @default(true)
+  active     Boolean  @default(true)
+  medicineId Int
+  createdAt  DateTime @default(now())
+  medicine   Medicine @relation(fields: [medicineId], references: [id])
+}
 
 model RobotState {
   id             Int      @id @default(autoincrement())
-  serialNumber   String   @default("PB-001") // 👈 Permite saber a qué robot pertenece este estado
-  status         String   // "OK", "DISPENSANDO", "ERROR"
+  status         String
   wifi           Boolean  @default(false)
   batteryPct     Int      @default(0)
-  temperature    Float?   @default(0) 
-  uptime         String?  @default("") 
-  signalStrength Int?     @default(0)  
+  temperature    Float?   @default(0)
+  uptime         String?  @default("")
+  signalStrength Int?     @default(0)
   updatedAt      DateTime @default(now())
-  
+  serialNumber   String   @default("PB-001")
+
   @@index([serialNumber])
 }
- 
-// ✅ MODELO NUEVO AGREGADO
+
 model Invitation {
-  id          Int      @id @default(autoincrement())
-  token       String   @unique  // Token único para compartir
-  caregiverId Int
-  caregiver   User     @relation(fields: [caregiverId], references: [id])
-  patientEmail String?  // Email del paciente (opcional)
-  patientName  String?  // Nombre del paciente (opcional)
-  used        Boolean  @default(false)
-  expiresAt   DateTime
-  createdAt   DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+  token        String   @unique
+  caregiverId  Int
+  patientEmail String?
+  patientName  String?
+  used         Boolean  @default(false)
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  caregiver    User     @relation(fields: [caregiverId], references: [id])
 }
 
 model RobotLog {
-  id          Int      @id @default(autoincrement())
-  medicineId  Int?
-  message     String
-  createdAt   DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  medicineId Int?
+  message    String
+  createdAt  DateTime @default(now())
 }
 
 model DispensationLog {
   id          Int      @id @default(autoincrement())
   medicineId  Int
-  medicine    Medicine @relation(fields: [medicineId], references: [id])
   patientId   Int?
-  status      String   // "DISPENSED", "TAKEN", "MISSED"
-  mood        String?  // 👈 Nuevo: "GOOD", "NORMAL", "BAD"
+  status      String
+  mood        String?
   dispensedAt DateTime @default(now())
+  medicine    Medicine @relation(fields: [medicineId], references: [id])
 }
 
 model DispensationTask {
   id           Int      @id @default(autoincrement())
-  serialNumber String   // A qué robot va dirigida la orden
-  slot         Int      // Qué posición del carrusel mover
-  status       String   @default("PENDING") // PENDING, COMPLETED, FAILED
+  serialNumber String
+  slot         Int
+  status       String   @default("PENDING")
   createdAt    DateTime @default(now())
-  
+
   @@index([serialNumber, status])
+}
+
+model RobotInventory {
+  id           Int      @id @default(autoincrement())
+  serialNumber String   @default("esp32pastibot")
+  slot         Int
+  medicineName String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([serialNumber, slot])
 }
 
 model PasswordReset {
