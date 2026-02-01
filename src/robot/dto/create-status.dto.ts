@@ -4,6 +4,8 @@ export class CreateStatusDto {
   @IsIn(['OK', 'DISPENSANDO', 'ERROR'])
   status: 'OK' | 'DISPENSANDO' | 'ERROR';
 
+  serialNumber: string; // 👈 Agregado para identificar el robot
+
   @IsBoolean()
   wifi: boolean;
 

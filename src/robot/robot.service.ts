@@ -21,6 +21,7 @@ export class RobotService {
   async reportStatus(dto: CreateStatusDto) {
     const state = await this.prisma.robotState.create({
       data: {
+        serialNumber: dto.serialNumber, // 👈 Identificar robot
         status: dto.status,
         wifi: dto.wifi,
         batteryPct: dto.batteryPct,
@@ -34,10 +35,13 @@ export class RobotService {
   }
 
   /**
-   * Devuelve el último estado conocido del robot
+   * Devuelve el último estado conocido de UN robot específico
    */
-  async getLatestStatus() {
+  async getLatestStatus(serialNumber: string) {
+    if (!serialNumber) return null;
+
     const state = await this.prisma.robotState.findFirst({
+      where: { serialNumber },
       orderBy: {
         updatedAt: 'desc',
       },

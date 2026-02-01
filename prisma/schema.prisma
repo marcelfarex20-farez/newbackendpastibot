@@ -52,6 +52,8 @@ model Patient {
   userId      Int?       @unique
   user        User?      @relation("UserPatientProfile", fields: [userId], references: [id])
   
+  robotSerialNumber String? @unique // 👈 Vincula este paciente a un robot físico
+  
   medicines   Medicine[]
 }
 
@@ -101,13 +103,16 @@ model Reminder {
 
 model RobotState {
   id             Int      @id @default(autoincrement())
+  serialNumber   String   @default("PB-001") // 👈 Permite saber a qué robot pertenece este estado
   status         String   // "OK", "DISPENSANDO", "ERROR"
   wifi           Boolean  @default(false)
   batteryPct     Int      @default(0)
-  temperature    Float?   @default(0) // 👈 Nuevo
-  uptime         String?  @default("") // 👈 Nuevo
-  signalStrength Int?     @default(0)  // 👈 Nuevo
+  temperature    Float?   @default(0) 
+  uptime         String?  @default("") 
+  signalStrength Int?     @default(0)  
   updatedAt      DateTime @default(now())
+  
+  @@index([serialNumber])
 }
  
 // ✅ MODELO NUEVO AGREGADO

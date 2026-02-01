@@ -110,8 +110,17 @@ export class PatientDataController {
     // GET ROBOT STATUS
     // =====================================================
     @Get('robot')
-    async getMyRobotStatus() {
-        return this.robotService.getLatestStatus();
+    async getMyRobotStatus(@Req() req: any) {
+        const userId = req.user.id;
+        const patient = await (this.prisma.patient as any).findFirst({
+            where: { userId: userId },
+        });
+
+        if (!patient || !patient.robotSerialNumber) {
+            return { status: 'DESCONOCIDO', wifi: false, batteryPct: 0 };
+        }
+
+        return this.robotService.getLatestStatus(patient.robotSerialNumber);
     }
 
     // =====================================================
