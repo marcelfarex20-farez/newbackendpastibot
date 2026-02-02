@@ -38,8 +38,8 @@ export class RobotService implements OnModuleInit {
     const minutes = String(localDate.getUTCMinutes()).padStart(2, '0');
     const currentHHmm = `${hours}:${minutes}`;
 
-    // Obtener día de la semana (LU, MA, MI, JU, VI, SA, DO)
-    const dayNames = ['DO', 'LU', 'MA', 'MI', 'JU', 'VI', 'SA'];
+    // Obtener día de la semana (Lu, Ma, Mi, Ju, Vi, Sa, Do) - Coincide con el Frontend
+    const dayNames = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'];
     const currentDay = dayNames[localDate.getUTCDay()];
 
     this.logger.debug(`⏰ Chequeando recordatorios para las ${currentHHmm} (${currentDay})...`);
@@ -49,7 +49,10 @@ export class RobotService implements OnModuleInit {
       where: {
         active: true,
         time: currentHHmm,
-        days: { contains: currentDay }
+        days: {
+          contains: currentDay,
+          mode: 'insensitive' // Por si acaso hay variaciones en el casing
+        }
       },
       include: {
         medicine: {
