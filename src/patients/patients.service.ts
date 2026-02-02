@@ -256,7 +256,7 @@ export class PatientsService {
 
     const currentHHmm = `${String(localTime.getUTCHours()).padStart(2, '0')}:${String(localTime.getUTCMinutes()).padStart(2, '0')}`;
 
-    return todayReminders.map((rem: any) => {
+    const monitoringResults = await Promise.all(todayReminders.map(async (rem: any) => {
       // 🕵️ Matching inteligente: 
       // Buscamos un log para esta medicina que haya ocurrido cerca de la hora programada.
       const log = logs.find((l: any) => {
@@ -282,7 +282,7 @@ export class PatientsService {
         console.log(`[MONITORING] Match found for ${rem.medicine.name} at ${rem.time}. Log status: ${log.status}`);
       } else {
         // 🚀 NUEVO: Check if there is an active task in PROCESSING state for this robot/med
-        const activeTask = await(this.prisma as any).dispensationTask.findFirst({
+        const activeTask = await (this.prisma as any).dispensationTask.findFirst({
           where: {
             medicineId: rem.medicineId,
             status: 'PROCESSING',
@@ -315,6 +315,8 @@ export class PatientsService {
         status: status,
         medicineId: rem.medicineId
       };
-    }).sort((a: any, b: any) => a.time.localeCompare(b.time));
+    }));
+
+    return monitoringResults.sort((a: any, b: any) => a.time.localeCompare(b.time));
   }
 }
