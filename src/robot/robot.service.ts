@@ -23,6 +23,7 @@ export class RobotService implements OnModuleInit {
     }
   }
   private readonly logger = new Logger(RobotService.name);
+  private statusCache = new Map<string, any>(); // ⚡ Memoria cache para estados
 
   constructor(
     private readonly prisma: PrismaService,
@@ -192,32 +193,46 @@ export class RobotService implements OnModuleInit {
    * El ESP32 envía su estado actual (batería, wifi, estado)
    */
   async reportStatus(dto: CreateStatusDto) {
-    const state = await (this.prisma as any).robotState.create({
-      data: {
-        serialNumber: dto.serialNumber, // 👈 Identificar robot
-        status: dto.status,
-        wifi: dto.wifi,
-        batteryPct: dto.batteryPct,
-        temperature: dto.temperature,
-        uptime: dto.uptime,
-        signalStrength: dto.signalStrength,
-      },
+    console.log(`[ROBOT] Recibido estado de ${dto.serialNumber}:`, dto);
+    const data = {
+      serialNumber: dto.serialNumber,
+      status: dto.status,
+      wifi: dto.wifi,
+      batteryPct: dto.batteryPct,
+      temperature: dto.temperature,
+      uptime: dto.uptime,
+      signalStrength: dto.signalStrength,
+      updatedAt: new Date()
+    };
+
+    // ⚡ ACTUALIZAR CACHE DE MEMORIA (INSTANTÁNEO)
+    this.statusCache.set(dto.serialNumber, {
+      ...data,
+      id: 0, // Mock id
     });
 
-    // 🚀 NOTIFICAR AL FRONTEND VIA WEBSOCKETS
-    this.robotGateway.broadcastStatusUpdate(dto.serialNumber, state);
+    // Guardar en DB en segundo plano (sin esperar)
+    this.prisma.robotState.create({ data }).catch(e => this.logger.error("Error saving state:", e));
 
-    return state;
+    // 🚀 NOTIFICAR AL FRONTEND VIA WEBSOCKETS
+    this.robotGateway.broadcastStatusUpdate(dto.serialNumber, data);
+
+    return data;
   }
 
   async getLatestStatus(serialNumber?: string, user?: any) {
+    console.log(`[ROBOT] Pidiendo estado para ${serialNumber} (User: ${user?.email})`);
     let targetSerial = serialNumber;
 
     // 🚀 INFERENCIA: Si no hay serial, lo buscamos en los pacientes del usuario
     if (!targetSerial && user) {
+      // 1. Si es CUIDADOR, busca su primer paciente con robot
       const patientWithRobot = await (this.prisma as any).patient.findFirst({
         where: {
-          caregiverId: user.id,
+          OR: [
+            { caregiverId: user.id },
+            { userId: user.id }
+          ],
           NOT: [
             { robotSerialNumber: null },
             { robotSerialNumber: "" }
@@ -226,16 +241,31 @@ export class RobotService implements OnModuleInit {
         select: { robotSerialNumber: true }
       });
       targetSerial = patientWithRobot?.robotSerialNumber;
+
+      // 2. ABSOLUTE FALLBACK: Si aún no hay serial, busca el ÚLTIMO robot activo en todo el sistema
+      if (!targetSerial) {
+        const lastKnownGlobal = await (this.prisma as any).robotState.findFirst({
+          orderBy: { updatedAt: 'desc' },
+          select: { serialNumber: true }
+        });
+        targetSerial = lastKnownGlobal?.serialNumber;
+      }
     }
 
     if (!targetSerial) return null;
 
-    const state = await (this.prisma as any).robotState.findFirst({
-      where: { serialNumber: targetSerial },
-      orderBy: {
-        updatedAt: 'desc',
-      },
-    });
+    // ⚡ INTENTAR CARGAR DE CACHE PRIMERO
+    let state = this.statusCache.get(targetSerial);
+
+    if (!state) {
+      state = await (this.prisma as any).robotState.findFirst({
+        where: { serialNumber: targetSerial },
+        orderBy: {
+          updatedAt: 'desc',
+        },
+      });
+      if (state) this.statusCache.set(targetSerial, state);
+    }
 
     if (!state) return null;
 

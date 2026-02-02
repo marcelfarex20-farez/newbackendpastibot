@@ -97,12 +97,26 @@ export class RobotController implements OnModuleInit {
   }
 
   /**
-   * [ESP32 → Backend]
-   * El Robot confirma que terminó una tarea.
+   * Alias de /tasks para compatibilidad con código manual del usuario
    */
+  @Get('pending')
+  getPendingTasksAlias(@Query('serialNumber') serialNumber: string) {
+    return this.robotService.getPendingTasks(serialNumber);
+  }
+
   @Post('tasks/complete')
   completeTask(@Body('taskId') taskId: number) {
     return this.robotService.completeTask(taskId);
+  }
+
+  /**
+   * Alias de /tasks/complete para compatibilidad con código manual del usuario
+   * Soporta taskId tanto en el Body como en el Query
+   */
+  @Post('complete')
+  completeTaskAlias(@Body('taskId') bodyTaskId: number, @Query('taskId') queryTaskId: string) {
+    const id = bodyTaskId || Number(queryTaskId);
+    return this.robotService.completeTask(id);
   }
 
   /**
