@@ -44,6 +44,8 @@ model Patient {
   medicines         Medicine[]
   caregiver         User?      @relation("CaregiverPatients", fields: [caregiverId], references: [id])
   user              User?      @relation("UserPatientProfile", fields: [userId], references: [id])
+
+  @@index([caregiverId]) // ⚡ Optimized for list patients
 }
 
 model Medicine {
@@ -68,6 +70,8 @@ model Medicine {
   caregiver        User?             @relation(fields: [caregiverId], references: [id])
   patient          Patient?          @relation(fields: [patientId], references: [id])
   reminders        Reminder[]
+
+  @@index([patientId]) // ⚡ Optimized for list medicines
 }
 
 model Reminder {
@@ -93,7 +97,7 @@ model RobotState {
   updatedAt      DateTime @default(now())
   serialNumber   String   @default("PB-001")
 
-  @@index([serialNumber])
+  @@index([serialNumber, updatedAt]) // ⚡ Optimized for getLatestStatus
 }
 
 model Invitation {

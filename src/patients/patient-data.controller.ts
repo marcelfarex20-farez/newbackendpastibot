@@ -111,27 +111,8 @@ export class PatientDataController {
     // =====================================================
     @Get('robot')
     async getMyRobotStatus(@Req() req: any) {
-        const userId = req.user.id;
-        const role = req.user.role;
-
-        let patient;
-        if (role === 'PACIENTE') {
-            patient = await (this.prisma.patient as any).findFirst({
-                where: { userId: userId },
-            });
-        } else {
-            // Si es CUIDADOR, buscamos el primer paciente a su cargo para mostrar el robot
-            patient = await (this.prisma.patient as any).findFirst({
-                where: { caregiverId: userId },
-            });
-        }
-
-        if (!patient || !patient.robotSerialNumber) {
-            // Intentar buscar un estado global si es un demo o no hay vinculación
-            return this.robotService.getLatestStatus("esp32pastibot");
-        }
-
-        return this.robotService.getLatestStatus(patient.robotSerialNumber);
+        // Ahora RobotService maneja la inferencia inteligentemente para todos
+        return this.robotService.getLatestStatus(undefined, req.user);
     }
 
     // =====================================================
