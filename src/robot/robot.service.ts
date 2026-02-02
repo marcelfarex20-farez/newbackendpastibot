@@ -28,30 +28,30 @@ export class RobotService implements OnModuleInit {
    */
   @Cron(CronExpression.EVERY_MINUTE)
   async handleCron() {
-    // 🌍 AJUSTE DE ZONA HORARIA (Ecuador/Perú UTC-5)
-    // El servidor suele estar en UTC. Restamos 5 horas.
     const now = new Date();
     const localDate = new Date(now.getTime() - (5 * 60 * 60 * 1000));
 
-    // Formatear HH:mm con ceros a la izquierda (ej: "08:05")
     const hours = String(localDate.getUTCHours()).padStart(2, '0');
     const minutes = String(localDate.getUTCMinutes()).padStart(2, '0');
     const currentHHmm = `${hours}:${minutes}`;
 
-    // Obtener día de la semana (Lu, Ma, Mi, Ju, Vi, Sa, Do) - Coincide con el Frontend
     const dayNames = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'];
     const currentDay = dayNames[localDate.getUTCDay()];
 
-    this.logger.debug(`⏰ Chequeando recordatorios para las ${currentHHmm} (${currentDay})...`);
+    // 🔬 LOG DE DEPURACIÓN (Solo cada 5 minutos para no saturar, o puedes quitar el if para ver todo)
+    if (localDate.getUTCMinutes() % 5 === 0) {
+      await (this.prisma as any).robotLog.create({
+        data: { message: `🔍 CHEQUEO: ${currentHHmm} (${currentDay}) - Servidor Buscando...` }
+      });
+    }
 
-    // 🔍 BUSCAR EN RECORDATORIOS (Soporta múltiples tomas)
     const activeReminders = await this.prisma.reminder.findMany({
       where: {
         active: true,
         time: currentHHmm,
         days: {
           contains: currentDay,
-          mode: 'insensitive' // Por si acaso hay variaciones en el casing
+          mode: 'insensitive'
         }
       },
       include: {
@@ -61,9 +61,20 @@ export class RobotService implements OnModuleInit {
       }
     });
 
+    if (activeReminders.length > 0) {
+      await (this.prisma as any).robotLog.create({
+        data: { message: `🎯 MATCH: Encontrados ${activeReminders.length} recordatorios para las ${currentHHmm}` }
+      });
+    }
+
     for (const reminder of activeReminders) {
       const med = reminder.medicine;
-      if (!med || !med.slot || !med.patient?.robotSerialNumber) continue;
+      if (!med || !med.slot || !med.patient?.robotSerialNumber) {
+        await (this.prisma as any).robotLog.create({
+          data: { message: `⚠️ SKIP: Medicina ${med?.name || 'ID ' + reminder.medicineId} sin slot o sin robot vinculado.` }
+        });
+        continue;
+      }
 
       const serial = med.patient.robotSerialNumber;
 
