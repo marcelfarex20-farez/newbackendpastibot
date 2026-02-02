@@ -28,40 +28,47 @@ export class RobotService implements OnModuleInit {
    */
   @Cron(CronExpression.EVERY_MINUTE)
   async handleCron() {
+    // 🌍 AJUSTE DE ZONA HORARIA (Ecuador/Perú UTC-5)
+    // El servidor suele estar en UTC. Restamos 5 horas.
     const now = new Date();
-    // Obtener hora actual en formato HH:mm (ej: 08:30)
-    const currentHHmm = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+    const localDate = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+
+    // Formatear HH:mm con ceros a la izquierda (ej: "08:05")
+    const hours = String(localDate.getUTCHours()).padStart(2, '0');
+    const minutes = String(localDate.getUTCMinutes()).padStart(2, '0');
+    const currentHHmm = `${hours}:${minutes}`;
 
     // Obtener día de la semana (LU, MA, MI, JU, VI, SA, DO)
     const dayNames = ['DO', 'LU', 'MA', 'MI', 'JU', 'VI', 'SA'];
-    const currentDay = dayNames[now.getDay()];
+    const currentDay = dayNames[localDate.getUTCDay()];
 
-    this.logger.debug(`⏰ Chequeando medicinas para las ${currentHHmm} (${currentDay})...`);
+    this.logger.debug(`⏰ Chequeando recordatorios para las ${currentHHmm} (${currentDay})...`);
 
-    // Buscar todas las medicinas que tengan slot y cuya hora coincida
-    const allMedicinesAtThisTime = await this.prisma.medicine.findMany({
+    // 🔍 BUSCAR EN RECORDATORIOS (Soporta múltiples tomas)
+    const activeReminders = await this.prisma.reminder.findMany({
       where: {
-        slot: { not: null },
+        active: true,
         time: currentHHmm,
+        days: { contains: currentDay }
       },
       include: {
-        patient: true
+        medicine: {
+          include: { patient: true }
+        }
       }
     });
 
-    // Filtrar manualmente por día (case-insensitive)
-    const medicinesToDispense = allMedicinesAtThisTime.filter(med =>
-      med.days.some((day: string) => day.toUpperCase() === currentDay)
-    );
+    for (const reminder of activeReminders) {
+      const med = reminder.medicine;
+      if (!med || !med.slot || !med.patient?.robotSerialNumber) continue;
 
-    for (const med of medicinesToDispense) {
-      if (!med.patient?.robotSerialNumber) continue;
+      const serial = med.patient.robotSerialNumber;
 
       // Evitar duplicados: Si ya existe una tarea creada en el último minuto para este slot, ignorar
       const oneMinuteAgo = new Date(now.getTime() - 59000);
       const existingTask = await (this.prisma as any).dispensationTask.findFirst({
         where: {
-          serialNumber: med.patient.robotSerialNumber,
+          serialNumber: serial,
           slot: med.slot,
           createdAt: { gte: oneMinuteAgo }
         }
@@ -75,7 +82,7 @@ export class RobotService implements OnModuleInit {
       // Crear la tarea para el ESP32
       await (this.prisma as any).dispensationTask.create({
         data: {
-          serialNumber: med.patient.robotSerialNumber,
+          serialNumber: serial,
           slot: med.slot,
           status: 'PENDING',
         }
@@ -89,10 +96,10 @@ export class RobotService implements OnModuleInit {
         }
       });
 
-      this.logger.log(`✅ Tarea automatica generada: ${med.name} (Slot ${med.slot})`);
+      this.logger.log(`✅ Tarea automática generada: ${med.name} (Slot ${med.slot}) para robot ${serial}`);
 
       // Notificar al frontend vía WebSocket
-      this.robotGateway.broadcastTaskUpdate(med.patient.robotSerialNumber, {
+      this.robotGateway.broadcastTaskUpdate(serial, {
         type: 'AUTO_DISPENSE',
         medicine: med.name,
         slot: med.slot,
