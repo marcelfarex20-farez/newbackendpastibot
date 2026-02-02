@@ -271,23 +271,39 @@ export class PatientsService {
         const remTotalMin = remH * 60 + remM;
 
         // Si el log ocurrió dentro de un rango de +/- 2 horas de la programación
-        return Math.abs(logTotalMin - remTotalMin) < 120;
+        const diff = Math.abs(logTotalMin - remTotalMin);
+        return diff < 120;
       });
 
       let status = 'PENDING';
 
       if (log) {
         status = (log.status === 'TAKEN' || log.status === 'DISPENSED') ? 'COMPLETED' : 'OMITTED';
+        console.log(`[MONITORING] Match found for ${rem.medicine.name} at ${rem.time}. Log status: ${log.status}`);
       } else {
-        // 🕒 Si NO hay log, pero ya pasamos la hora programada (+ 10 min de gracia)
-        // lo marcamos como OMITTED automáticamente.
-        const [remH, remM] = rem.time.split(':').map(Number);
-        const [curH, curM] = currentHHmm.split(':').map(Number);
-        const remTotalMin = remH * 60 + remM;
-        const curTotalMin = curH * 60 + curM;
+        // 🚀 NUEVO: Check if there is an active task in PROCESSING state for this robot/med
+        const activeTask = await(this.prisma as any).dispensationTask.findFirst({
+          where: {
+            medicineId: rem.medicineId,
+            status: 'PROCESSING',
+            createdAt: { gte: startOfDay }
+          }
+        });
 
-        if (curTotalMin > (remTotalMin + 5)) {
-          status = 'OMITTED';
+        if (activeTask) {
+          status = 'PROCESSING';
+          console.log(`[MONITORING] Active task found for ${rem.medicine.name}. status: PROCESSING`);
+        } else {
+          // 🕒 Si NO hay log ni tarea activa, pero ya pasamos la hora programada (+ 15 min de gracia)
+          const [remH, remM] = rem.time.split(':').map(Number);
+          const [curH, curM] = currentHHmm.split(':').map(Number);
+          const remTotalMin = remH * 60 + remM;
+          const curTotalMin = curH * 60 + curM;
+
+          if (curTotalMin > (remTotalMin + 15)) {
+            status = 'OMITTED';
+            console.log(`[MONITORING] No log/task for ${rem.medicine.name} at ${rem.time}. Marking as OMITTED`);
+          }
         }
       }
 
