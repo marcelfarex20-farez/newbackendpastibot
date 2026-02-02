@@ -87,4 +87,9 @@ export class PatientsController {
   getReminders(@Req() req: any, @Param('id') id: string) {
     return this.patientsService.getPatientReminders(req.user.id, Number(id));
   }
+
+  @Get(':id/daily-monitoring')
+  getDailyMonitoring(@Req() req: any, @Param('id') id: string) {
+    return this.patientsService.getDailyMonitoring(req.user.id, Number(id));
+  }
 }

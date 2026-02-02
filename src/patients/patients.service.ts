@@ -8,8 +8,6 @@ import { randomBytes } from 'crypto';
 export class PatientsService {
   constructor(private prisma: PrismaService) { }
 
-
-
   private generateLinkCode(): string {
     return randomBytes(3).toString('hex').toUpperCase(); // 6 caracteres
   }
@@ -127,22 +125,14 @@ export class PatientsService {
       where: { userId }
     });
 
-    // Si no existe, lo creamos (UPSERT lógico) para soportar usuarios de Google
     if (!patient) {
       console.log(`[PROFILE FIX] Creando perfil de paciente faltante para User ${userId}`);
-
-      const user = await (this.prisma.user as any).findUnique({
-        where: { id: userId }
-      });
-
+      const user = await (this.prisma.user as any).findUnique({ where: { id: userId } });
       if (!user) throw new NotFoundException('Usuario no encontrado');
-
-      // Creamos el perfil de paciente
-      // Nota: No tendrá cuidador asignado (caregiverId: null) hasta que se vincule
       patient = await (this.prisma.patient as any).create({
         data: {
           userId: user.id,
-          name: dto.name || user.name, // Usar nombre del DTO o del usuario
+          name: dto.name || user.name,
           email: user.email,
           gender: dto.gender || user.gender,
           age: dto.age,
@@ -150,25 +140,17 @@ export class PatientsService {
           emergencyPhone: dto.emergencyPhone
         }
       });
-
-      // Si se envió género, actualizamos también al usuario base
       if (dto.gender && dto.gender !== user.gender) {
         await (this.prisma.user as any).update({
           where: { id: userId },
           data: { gender: dto.gender }
         });
       }
-
       return patient;
     }
 
-    // Si ya existía, actualización normal
-
-    // 🛡️ PROTECT: Separate caregiverCode from primitive fields to avoid Prisma error
     const { ...cleanDto } = dto as any;
     delete cleanDto.caregiverCode;
-
-    // Handle caregiverCode manually if provided
     let extraData = {};
     if ((dto as any).caregiverCode) {
       const code = (dto as any).caregiverCode.toUpperCase();
@@ -180,13 +162,9 @@ export class PatientsService {
 
     const updatedPatient = await (this.prisma.patient as any).update({
       where: { id: patient.id },
-      data: {
-        ...cleanDto,
-        ...extraData
-      },
+      data: { ...cleanDto, ...extraData },
     });
 
-    // También actualizamos el género en el User si viene en el DTO
     if (dto.gender) {
       await (this.prisma.user as any).update({
         where: { id: userId },
@@ -199,123 +177,91 @@ export class PatientsService {
 
   async findOneForCaregiver(caregiverId: number, id: number) {
     const patient = await (this.prisma.patient as any).findFirst({
-      where: {
-        id,
-        caregiverId,
-      },
+      where: { id, caregiverId },
       include: {
         medicines: true,
-        user: {
-          select: {
-            photoUrl: true,
-            bio: true,
-          }
-        },
-        caregiver: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            photoUrl: true,
-          }
-        }
+        user: { select: { photoUrl: true, bio: true } },
+        caregiver: { select: { id: true, name: true, email: true, photoUrl: true } }
       },
     });
-
-    if (!patient) {
-      throw new NotFoundException('Paciente no encontrado');
-    }
-
+    if (!patient) throw new NotFoundException('Paciente no encontrado');
     return patient;
   }
 
   async update(caregiverId: number, id: number, dto: UpdatePatientDto) {
-    // Revisa primero que sea del cuidador
     await this.findOneForCaregiver(caregiverId, id);
-
-    return (this.prisma.patient as any).update({
-      where: { id },
-      data: dto,
-    });
+    return (this.prisma.patient as any).update({ where: { id }, data: dto });
   }
 
   async remove(caregiverId: number, id: number) {
-    // Revisa primero que sea del cuidador
     await this.findOneForCaregiver(caregiverId, id);
-
-    return (this.prisma.patient as any).delete({
-      where: { id },
-    });
+    return (this.prisma.patient as any).delete({ where: { id } });
   }
 
   async getPatientHistory(caregiverId: number, patientId: number, days: number = 7) {
-    // Verificar que el paciente pertenece al cuidador
     await this.findOneForCaregiver(caregiverId, patientId);
-
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
-
-    // Obtener medicinas del paciente
-    const medicines = await (this.prisma.medicine as any).findMany({
-      where: { patientId },
-      select: { id: true }
-    });
-
+    const medicines = await (this.prisma.medicine as any).findMany({ where: { patientId }, select: { id: true } });
     const medicineIds = medicines.map((m: any) => m.id);
-
-    // Si no hay medicinas, retornar array vacío
-    if (medicineIds.length === 0) {
-      return [];
-    }
-
-    // Buscar historial de dispensación usando el nombre correcto: dispensationLog
-    const history = await (this.prisma.dispensationLog as any).findMany({
-      where: {
-        medicineId: { in: medicineIds },
-        dispensedAt: { gte: startDate }
-      },
-      include: {
-        medicine: {
-          select: {
-            id: true,
-            name: true,
-            dosage: true
-          }
-        }
-      },
+    if (medicineIds.length === 0) return [];
+    return (this.prisma.dispensationLog as any).findMany({
+      where: { medicineId: { in: medicineIds }, dispensedAt: { gte: startDate } },
+      include: { medicine: { select: { id: true, name: true, dosage: true } } },
       orderBy: { dispensedAt: 'desc' }
     });
-
-    return history;
   }
 
   async getPatientReminders(caregiverId: number, patientId: number) {
-    // Verificar que el paciente pertenece al cuidador
     await this.findOneForCaregiver(caregiverId, patientId);
-
-    // Obtener recordatorios usando el campo 'time'
     const reminders = await (this.prisma.reminder as any).findMany({
-      where: {
-        medicine: {
-          patientId: patientId
-        }
-      },
-      include: {
-        medicine: {
-          select: {
-            id: true,
-            name: true,
-            dosage: true
-          }
-        }
-      },
+      where: { medicine: { patientId } },
+      include: { medicine: { select: { id: true, name: true, dosage: true } } },
       orderBy: { time: 'asc' },
       take: 10
     });
+    return reminders.map((r: any) => ({ ...r, medicineName: r.medicine?.name || 'Medicina' }));
+  }
 
-    return reminders.map((r: any) => ({
-      ...r,
-      medicineName: r.medicine?.name || 'Medicina'
-    }));
+  async getDailyMonitoring(caregiverId: number, patientId: number) {
+    await this.findOneForCaregiver(caregiverId, patientId);
+    const reminders = await (this.prisma.reminder as any).findMany({
+      where: { medicine: { patientId } },
+      include: { medicine: true }
+    });
+
+    const now = new Date();
+    const localDate = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+    const dayNames = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'];
+    const today = dayNames[localDate.getUTCDay()];
+
+    const todayReminders = reminders.filter((r: any) => {
+      if (!r.days) return false;
+      const days = r.days.split(',').map((d: string) => d.trim().toLowerCase());
+      return days.includes(today.toLowerCase());
+    });
+
+    const startOfDay = new Date(localDate);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+
+    const logs = await (this.prisma as any).dispensationLog.findMany({
+      where: { patientId, dispensedAt: { gte: startOfDay } }
+    });
+
+    return todayReminders.map((rem: any) => {
+      const log = logs.find((l: any) => l.medicineId === rem.medicineId);
+      let status = 'PENDING';
+      if (log) {
+        status = log.status === 'TAKEN' || log.status === 'DISPENSED' ? 'COMPLETED' : 'OMITTED';
+      }
+      return {
+        id: rem.id,
+        time: rem.time,
+        medicineName: rem.medicine.name,
+        dosage: rem.medicine.dosage,
+        status: status,
+        medicineId: rem.medicineId
+      };
+    }).sort((a: any, b: any) => a.time.localeCompare(b.time));
   }
 }

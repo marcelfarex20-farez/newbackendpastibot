@@ -115,6 +115,8 @@ export class RobotService implements OnModuleInit {
         data: {
           serialNumber: serial,
           slot: med.slot,
+          medicineId: med.id,    // 👈 Guardar ID
+          patientId: med.patientId, // 👈 Guardar ID
           status: 'PENDING',
         }
       });
@@ -129,12 +131,59 @@ export class RobotService implements OnModuleInit {
 
       this.logger.log(`✅ Tarea automática generada: ${med.name} (Slot ${med.slot}) para robot ${serial}`);
 
-      // Notificar al frontend vía WebSocket
       this.robotGateway.broadcastTaskUpdate(serial, {
         type: 'AUTO_DISPENSE',
         medicine: med.name,
         slot: med.slot,
         status: 'PENDING'
+      });
+    }
+  }
+
+  /**
+   * 🕒 LOGICA DE TIMEOUT (3 MINUTOS)
+   * Revisa tareas PENDING o PROCESSING muy antiguas y las marca como OMITIDAS. 
+   */
+  @Cron('*/1 * * * *') // Cada minuto
+  async handleTimeouts() {
+    const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
+
+    const expiredTasks = await (this.prisma as any).dispensationTask.findMany({
+      where: {
+        status: { in: ['PENDING', 'PROCESSING'] },
+        createdAt: { lt: threeMinutesAgo }
+      }
+    });
+
+    for (const task of expiredTasks) {
+      await (this.prisma as any).dispensationTask.update({
+        where: { id: task.id },
+        data: { status: 'OMITTED' }
+      });
+
+      if (task.medicineId) {
+        // Registrar en el historial como MISSED
+        await (this.prisma as any).dispensationLog.create({
+          data: {
+            medicineId: task.medicineId,
+            patientId: task.patientId,
+            status: 'MISSED',
+            dispensedAt: new Date()
+          }
+        });
+
+        await (this.prisma as any).robotLog.create({
+          data: {
+            medicineId: task.medicineId,
+            message: `⚠️ TIMEOUT: Dosis omitida (3 min sin respuesta) para slot ${task.slot}`,
+          }
+        });
+      }
+
+      // Notificar al front
+      this.robotGateway.broadcastTaskUpdate(task.serialNumber, {
+        taskId: task.id,
+        status: 'OMITTED'
       });
     }
   }
@@ -190,12 +239,12 @@ export class RobotService implements OnModuleInit {
 
     if (!state) return null;
 
-    // 🕒 VERIFICAR SI ESTÁ OFFLINE (más de 15 segundos sin reportar)
+    // 🕒 VERIFICAR SI ESTÁ OFFLINE (más de 30 segundos sin reportar)
     const now = new Date();
     const lastUpdate = new Date(state.updatedAt);
     const secondsSinceLastUpdate = (now.getTime() - lastUpdate.getTime()) / 1000;
 
-    if (secondsSinceLastUpdate > 15) {
+    if (secondsSinceLastUpdate > 30) {
       return {
         ...state,
         status: 'OFFLINE',
@@ -235,6 +284,8 @@ export class RobotService implements OnModuleInit {
       data: {
         serialNumber: targetSerial,
         slot: medicine.slot,
+        medicineId: dto.medicineId,  // 👈 Guardar ID
+        patientId: medicine.patientId, // 👈 Guardar ID
         status: 'PENDING',
       },
     });
@@ -375,10 +426,24 @@ export class RobotService implements OnModuleInit {
    */
   async completeTask(taskId: any) {
     const id = typeof taskId === 'string' ? parseInt(taskId) : taskId;
-    const res = await (this.prisma as any).dispensationTask.update({
+    const completedTask = await (this.prisma as any).dispensationTask.update({
       where: { id },
       data: { status: 'COMPLETED' },
     });
+
+    // 📝 Crear Log de historial exitoso para el monitoreo
+    if (completedTask.medicineId) {
+      await (this.prisma as any).dispensationLog.create({
+        data: {
+          medicineId: completedTask.medicineId,
+          patientId: completedTask.patientId,
+          status: 'TAKEN', // O 'DISPENSED'
+          dispensedAt: new Date()
+        }
+      });
+    }
+
+    const res = completedTask;
 
     // 🚀 NOTIFICAR AL FRONTEND VIA WEBSOCKETS
     this.robotGateway.broadcastTaskUpdate(res.serialNumber, {

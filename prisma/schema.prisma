@@ -129,6 +129,8 @@ model DispensationTask {
   id           Int      @id @default(autoincrement())
   serialNumber String
   slot         Int
+  medicineId   Int?     // 👈 Nuevo: Saber qué medicina es
+  patientId    Int?     // 👈 Nuevo: Saber de quién es
   status       String   @default("PENDING")
   createdAt    DateTime @default(now())
 
