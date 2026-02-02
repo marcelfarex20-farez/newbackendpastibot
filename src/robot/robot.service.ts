@@ -341,13 +341,20 @@ export class RobotService implements OnModuleInit {
       if (inventory) {
         const medicine = await this.prisma.medicine.findFirst({
           where: {
-            name: inventory.medicineName,
+            name: { equals: inventory.medicineName, mode: 'insensitive' },
             patient: { robotSerialNumber: serialNumber }
           },
           include: { patient: true }
         });
         if (medicine?.patient?.name) {
           patientName = medicine.patient.name.split(' ')[0]; // Solo primer nombre para el LCD
+          await (this.prisma as any).robotLog.create({
+            data: { message: `🔍 LOOKUP OK: Slot ${task.slot} -> ${inventory.medicineName} -> Paciente: ${patientName}` }
+          });
+        } else {
+          await (this.prisma as any).robotLog.create({
+            data: { message: `⚠️ LOOKUP FAIL: No se halló medicina '${inventory.medicineName}' para robot ${serialNumber}` }
+          });
         }
       }
     } catch (e) {
