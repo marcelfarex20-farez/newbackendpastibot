@@ -231,9 +231,10 @@ export class PatientsService {
     });
 
     const now = new Date();
-    const localDate = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+    // 🇪🇺 Ecuador GMT-5
+    const localTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
     const dayNames = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'];
-    const today = dayNames[localDate.getUTCDay()];
+    const today = dayNames[localTime.getUTCDay()];
 
     const todayReminders = reminders.filter((r: any) => {
       if (!r.days) return false;
@@ -241,19 +242,55 @@ export class PatientsService {
       return days.includes(today.toLowerCase());
     });
 
-    const startOfDay = new Date(localDate);
-    startOfDay.setUTCHours(0, 0, 0, 0);
+    // Inicio del día en UTC para filtrar logs (00:00 local = 05:00 UTC)
+    const startOfDay = new Date(localTime);
+    startOfDay.setUTCHours(5, 0, 0, 0);
 
     const logs = await (this.prisma as any).dispensationLog.findMany({
-      where: { patientId, dispensedAt: { gte: startOfDay } }
+      where: {
+        patientId,
+        dispensedAt: { gte: startOfDay }
+      },
+      orderBy: { dispensedAt: 'desc' }
     });
 
+    const currentHHmm = `${String(localTime.getUTCHours()).padStart(2, '0')}:${String(localTime.getUTCMinutes()).padStart(2, '0')}`;
+
     return todayReminders.map((rem: any) => {
-      const log = logs.find((l: any) => l.medicineId === rem.medicineId);
+      // 🕵️ Matching inteligente: 
+      // Buscamos un log para esta medicina que haya ocurrido cerca de la hora programada.
+      const log = logs.find((l: any) => {
+        if (l.medicineId !== rem.medicineId) return false;
+
+        // Calcular minutos del log en local
+        const logDate = new Date(new Date(l.dispensedAt).getTime() - (5 * 60 * 60 * 1000));
+        const logTotalMin = logDate.getUTCHours() * 60 + logDate.getUTCMinutes();
+
+        // Calcular minutos de la programación
+        const [remH, remM] = rem.time.split(':').map(Number);
+        const remTotalMin = remH * 60 + remM;
+
+        // Si el log ocurrió dentro de un rango de +/- 2 horas de la programación
+        return Math.abs(logTotalMin - remTotalMin) < 120;
+      });
+
       let status = 'PENDING';
+
       if (log) {
-        status = log.status === 'TAKEN' || log.status === 'DISPENSED' ? 'COMPLETED' : 'OMITTED';
+        status = (log.status === 'TAKEN' || log.status === 'DISPENSED') ? 'COMPLETED' : 'OMITTED';
+      } else {
+        // 🕒 Si NO hay log, pero ya pasamos la hora programada (+ 10 min de gracia)
+        // lo marcamos como OMITTED automáticamente.
+        const [remH, remM] = rem.time.split(':').map(Number);
+        const [curH, curM] = currentHHmm.split(':').map(Number);
+        const remTotalMin = remH * 60 + remM;
+        const curTotalMin = curH * 60 + curM;
+
+        if (curTotalMin > (remTotalMin + 10)) {
+          status = 'OMITTED';
+        }
       }
+
       return {
         id: rem.id,
         time: rem.time,
