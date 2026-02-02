@@ -331,9 +331,33 @@ export class RobotService implements OnModuleInit {
       slot: task.slot
     });
 
+    // 3. Intentar obtener el nombre del paciente para que el ESP32 lo muestre en el LCD
+    let patientName = "Paciente";
+    try {
+      const inventory = await (this.prisma as any).robotInventory.findUnique({
+        where: { serialNumber_slot: { serialNumber, slot: task.slot } }
+      });
+
+      if (inventory) {
+        const medicine = await this.prisma.medicine.findFirst({
+          where: {
+            name: inventory.medicineName,
+            patient: { robotSerialNumber: serialNumber }
+          },
+          include: { patient: true }
+        });
+        if (medicine?.patient?.name) {
+          patientName = medicine.patient.name.split(' ')[0]; // Solo primer nombre para el LCD
+        }
+      }
+    } catch (e) {
+      this.logger.error("Error buscando paciente para tarea:", e);
+    }
+
     return {
       taskId: task.id,
-      slot: task.slot
+      slot: task.slot,
+      patient: patientName
     };
   }
 
