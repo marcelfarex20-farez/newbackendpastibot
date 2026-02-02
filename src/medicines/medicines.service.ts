@@ -172,7 +172,12 @@ export class MedicinesService {
       where: { medicineId: id },
     });
 
-    // 🔥 SEGUNDO: Eliminar la medicina
+    // 🔥 SEGUNDO: Eliminar los logs de dispensación (evita error de FK)
+    await (this.prisma as any).dispensationLog.deleteMany({
+      where: { medicineId: id },
+    });
+
+    // 🔥 TERCERO: Eliminar la medicina
     return this.prisma.medicine.delete({
       where: { id },
     });
