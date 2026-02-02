@@ -12,8 +12,15 @@ import { RobotGateway } from './robot.gateway';
 
 @Injectable()
 export class RobotService implements OnModuleInit {
-  onModuleInit() {
-    console.log('🦾 RobotService initialized');
+  async onModuleInit() {
+    this.logger.log('🦾 RobotService initialized - Versión 2.1 (Heartbeat Fix)');
+    try {
+      await (this.prisma as any).robotLog.create({
+        data: { message: '🚀 SERVICIO INICIADO: El sistema cron está arrancando...' }
+      });
+    } catch (e) {
+      console.error('Error in onModuleInit log:', e);
+    }
   }
   private readonly logger = new Logger(RobotService.name);
 
@@ -26,7 +33,7 @@ export class RobotService implements OnModuleInit {
   /**
    * Tarea automática: Se ejecuta cada minuto para revisar si toca dar alguna pastilla.
    */
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron('* * * * *')
   async handleCron() {
     const now = new Date();
     const localDate = new Date(now.getTime() - (5 * 60 * 60 * 1000));
@@ -38,12 +45,10 @@ export class RobotService implements OnModuleInit {
     const dayNames = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'];
     const currentDay = dayNames[localDate.getUTCDay()];
 
-    // 🔬 LOG DE DEPURACIÓN (Solo cada 5 minutos para no saturar, o puedes quitar el if para ver todo)
-    if (localDate.getUTCMinutes() % 5 === 0) {
-      await (this.prisma as any).robotLog.create({
-        data: { message: `🔍 CHEQUEO: ${currentHHmm} (${currentDay}) - Servidor Buscando...` }
-      });
-    }
+    // 🔬 LOG DE DEPURACIÓN - SIEMPRE LOGUEAR PARA VER SI EL CRON CORRE
+    await (this.prisma as any).robotLog.create({
+      data: { message: `🔍 CRON RUN: ${currentHHmm} (${currentDay})` }
+    });
 
     const activeReminders = await this.prisma.reminder.findMany({
       where: {
