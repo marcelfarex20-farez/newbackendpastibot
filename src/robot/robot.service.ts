@@ -45,19 +45,11 @@ export class RobotService implements OnModuleInit {
     const dayNames = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'];
     const currentDay = dayNames[localDate.getUTCDay()];
 
-    // 🔬 LOG DE DEPURACIÓN - SIEMPRE LOGUEAR PARA VER SI EL CRON CORRE
-    await (this.prisma as any).robotLog.create({
-      data: { message: `🔍 CRON RUN: ${currentHHmm} (${currentDay})` }
-    });
-
-    const activeReminders = await this.prisma.reminder.findMany({
+    // 🔍 BUSCAR TODO LO DE ESTA HORA (Luego filtramos por día en JS)
+    const candidates = await this.prisma.reminder.findMany({
       where: {
         active: true,
-        time: currentHHmm,
-        days: {
-          contains: currentDay,
-          mode: 'insensitive'
-        }
+        time: currentHHmm
       },
       include: {
         medicine: {
@@ -66,9 +58,29 @@ export class RobotService implements OnModuleInit {
       }
     });
 
+    if (candidates.length > 0) {
+      await (this.prisma as any).robotLog.create({
+        data: { message: `🔔 CRON: ${candidates.length} candidatas para las ${currentHHmm}. Chequeando día ${currentDay}...` }
+      });
+    } else {
+      // HEARTBEAT LOG cada 10 min
+      if (localDate.getUTCMinutes() % 10 === 0) {
+        await (this.prisma as any).robotLog.create({
+          data: { message: `🔍 CRON BEAT: ${currentHHmm} (${currentDay}) - No hay nada ahora.` }
+        });
+      }
+    }
+
+    // Filtrar por día manualmente (más robusto)
+    const activeReminders = candidates.filter(r => {
+      if (!r.days) return false;
+      const daysArr = r.days.split(',').map(d => d.trim().toLowerCase());
+      return daysArr.includes(currentDay.toLowerCase());
+    });
+
     if (activeReminders.length > 0) {
       await (this.prisma as any).robotLog.create({
-        data: { message: `🎯 MATCH: Encontrados ${activeReminders.length} recordatorios para las ${currentHHmm}` }
+        data: { message: `🎯 CRON MATCH: ${activeReminders.length} recordatorios coinciden con día y hora.` }
       });
     }
 
@@ -76,12 +88,12 @@ export class RobotService implements OnModuleInit {
       const med = reminder.medicine;
       if (!med || !med.slot || !med.patient?.robotSerialNumber) {
         await (this.prisma as any).robotLog.create({
-          data: { message: `⚠️ SKIP: Medicina ${med?.name || 'ID ' + reminder.medicineId} sin slot o sin robot vinculado.` }
+          data: { message: `⚠️ SKIP: Medicina ${med?.name || 'ID ' + reminder.medicineId} ignorada. Slot: ${med?.slot}, Serial: ${med?.patient?.robotSerialNumber}` }
         });
         continue;
       }
 
-      const serial = med.patient.robotSerialNumber;
+      const serial = med.patient.robotSerialNumber.trim();
 
       // Evitar duplicados: Si ya existe una tarea creada en el último minuto para este slot, ignorar
       const oneMinuteAgo = new Date(now.getTime() - 59000);
