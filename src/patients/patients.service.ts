@@ -286,7 +286,7 @@ export class PatientsService {
         const remTotalMin = remH * 60 + remM;
         const curTotalMin = curH * 60 + curM;
 
-        if (curTotalMin > (remTotalMin + 10)) {
+        if (curTotalMin > (remTotalMin + 5)) {
           status = 'OMITTED';
         }
       }
