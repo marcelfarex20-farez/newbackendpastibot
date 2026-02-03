@@ -200,7 +200,7 @@ export class RobotService implements OnModuleInit {
       wifi: dto.wifi,
       batteryPct: dto.batteryPct,
       temperature: dto.temperature,
-      uptime: dto.uptime,
+      uptime: dto.uptime ? String(dto.uptime) : null,
       signalStrength: dto.signalStrength,
       updatedAt: new Date()
     };
