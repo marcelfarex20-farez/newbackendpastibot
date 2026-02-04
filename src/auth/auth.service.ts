@@ -291,16 +291,17 @@ export class AuthService {
       });
 
       if (!user) {
-        // Si no existe, lo creamos automáticamente como PACIENTE por defecto
-        // o lanzamos un error si preferimos registro explícito.
-        // Siguiendo la lógica de Echobeat, solemos crearlo si es social.
+        // 🛡️ Solo el correo del dueño puede ser CUIDADOR
+        const primaryEmail = 'sagabayanthony19@gmail.com';
+        const role = email === primaryEmail ? 'CUIDADOR' : 'PACIENTE';
+
         user = await this.prisma.user.create({
           data: {
             name: decoded.name || email.split('@')[0],
             email,
             provider: decoded.firebase?.sign_in_provider || 'google',
             verified: true,
-            role: 'PACIENTE', // Rol por defecto
+            role,
           },
         });
       }
@@ -334,18 +335,22 @@ export class AuthService {
         });
       }
 
+      // 🛡️ REQUISITO DE ROL: Solo el dueño es CUIDADOR
+      const primaryEmail = 'sagabayanthony19@gmail.com';
+      const finalRole = email === primaryEmail ? 'CUIDADOR' : 'PACIENTE';
+
       const user = await this.prisma.user.create({
         data: {
           name: dto.name || decoded.name || email.split('@')[0],
           email,
           provider: decoded.firebase?.sign_in_provider || 'google',
           verified: true,
-          role: dto.role,
+          role: finalRole,
           gender: dto.gender,
         },
       });
 
-      if (dto.role === 'PACIENTE' && caregiver) {
+      if (finalRole === 'PACIENTE' && caregiver) {
         await (this.prisma.patient as any).create({
           data: {
             name: user.name,
