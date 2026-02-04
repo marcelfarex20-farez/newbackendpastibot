@@ -307,10 +307,9 @@ export class AuthService {
 
       return await this.buildAuthResponse(user);
     } catch (err: any) {
-      console.error('❌ Error en firebaseLogin:', err);
-      // Incluimos el mensaje original de Firebase para diagnóstico
-      const detailedMessage = err?.message || 'Error desconocido';
-      throw new UnauthorizedException(`Autenticación de Firebase fallida: ${detailedMessage}`);
+      console.error('❌ Error en firebaseLogin [V2]:', err);
+      const detailedMessage = err?.message || JSON.stringify(err);
+      throw new UnauthorizedException(`[BACKEND-V2] Fallo Login Firebase: ${detailedMessage}`);
     }
   }
 
@@ -358,9 +357,10 @@ export class AuthService {
       }
 
       return await this.buildAuthResponse(user);
-    } catch (err) {
-      console.error('❌ Error en firebaseRegister:', err);
-      throw err;
+    } catch (err: any) {
+      console.error('❌ Error en firebaseRegister [V2]:', err);
+      const detailedMessage = err?.message || JSON.stringify(err);
+      throw new UnauthorizedException(`[BACKEND-V2] Fallo Register Firebase: ${detailedMessage}`);
     }
   }
 
