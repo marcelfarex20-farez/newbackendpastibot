@@ -30,30 +30,27 @@ export class AuthService {
 
     if (exists) throw new ConflictException('El correo ya está registrado');
 
-    // 🔒 BLOQUEO DE SEGURIDAD: Solo puede existir el cuidador definido por Seed
-    if (dto.role === 'CUIDADOR') {
-      throw new UnauthorizedException('El registro de nuevos cuidadores está desactivado. Usa las credenciales por defecto.');
-    }
+    // 🛡️ REQUISITO DE UNIFICACIÓN: Todo registro local nuevo es PACIENTE.
+    // Solo el dueño (Anthony) puede ser Cuidador (se crea vía Seed).
+    const finalRole = 'PACIENTE';
 
     // 🛡️ REQUISITO PARA PACIENTES: Deben tener un código de cuidador
     let caregiver: any = null;
-    if (dto.role === 'PACIENTE') {
-      if (!dto.caregiverCode) {
-        throw new ConflictException('Los pacientes deben proporcionar un código de cuidador para registrarse.');
-      }
+    if (!dto.caregiverCode) {
+      throw new ConflictException('Debes proporcionar el código de tu cuidador para registrarte.');
+    }
 
-      caregiver = await (this.prisma.user as any).findUnique({
-        where: { sharingCode: dto.caregiverCode.toUpperCase() },
-        include: { patients: true }
-      });
+    caregiver = await (this.prisma.user as any).findUnique({
+      where: { sharingCode: dto.caregiverCode.toUpperCase() },
+      include: { patients: true }
+    });
 
-      if (!caregiver) {
-        throw new ConflictException('El código de cuidador ingresado no es válido.');
-      }
+    if (!caregiver) {
+      throw new ConflictException('El código de cuidador ingresado no es válido.');
+    }
 
-      if (caregiver.patients.length >= 2) {
-        throw new ConflictException('Este cuidador ya tiene el límite de pacientes alcanzado (Máximo 2).');
-      }
+    if (caregiver.patients.length >= 2) {
+      throw new ConflictException('Este cuidador ya tiene el límite de pacientes alcanzado (Máximo 2).');
     }
 
     const hashed = await bcrypt.hash(dto.password, 10);
@@ -65,13 +62,13 @@ export class AuthService {
         password: hashed,
         provider: 'email',
         verified: true,
-        role: dto.role,
+        role: finalRole,
         gender: dto.gender,
       },
     });
 
-    // 🔗 VINCULACIÓN AUTOMÁTICA SI ES PACIENTE
-    if (dto.role === 'PACIENTE' && caregiver) {
+    // 🔗 VINCULACIÓN AUTOMÁTICA
+    if (caregiver) {
       await (this.prisma.patient as any).create({
         data: {
           name: user.name,
