@@ -86,28 +86,30 @@ export class AuthService {
   // LOGIN LOCAL
   // ===============================
   async loginLocal(dto: LoginDto) {
-    console.log(`[AUTH] Intentando login local para: ${dto.email}`);
+    const email = dto.email.trim().toLowerCase();
+    console.log(`[AUTH] Intentando login local para: ${email}`);
+
     const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+      where: { email },
     });
 
     if (!user) {
-      console.warn(`[AUTH] Usuario no encontrado: ${dto.email}`);
+      console.warn(`[AUTH] Usuario no encontrado: ${email}`);
       throw new UnauthorizedException('Credenciales inválidas (Usuario no existe)');
     }
 
     if (!user.password) {
-      console.warn(`[AUTH] El usuario ${dto.email} no tiene contraseña local`);
+      console.warn(`[AUTH] El usuario ${email} no tiene contraseña local`);
       throw new UnauthorizedException('Este usuario no tiene contraseña (usó Google)');
     }
 
     const isMatch = await bcrypt.compare(dto.password, user.password);
     if (!isMatch) {
-      console.warn(`[AUTH] Contraseña incorrecta para: ${dto.email}`);
+      console.warn(`[AUTH] Contraseña incorrecta para: ${email}`);
       throw new UnauthorizedException('Credenciales inválidas (Contraseña incorrecta)');
     }
 
-    console.log(`[AUTH] Login exitoso: ${dto.email}`);
+    console.log(`[AUTH] Login exitoso: ${email}`);
     return await this.buildAuthResponse(user);
   }
 
