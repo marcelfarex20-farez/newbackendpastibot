@@ -5,32 +5,18 @@ async function bootstrap() {
   console.log('🚀 Pastibot Backend iniciando bootstrap...');
   const app = await NestFactory.create(AppModule);
 
-  // 📸 Aumentar límite de carga para fotos de medicina (Base64)
+  // 1. CORS primero!!!
+  app.enableCors({
+    origin: true, // Permitir cualquier origen que venga en la cabecera (dinámico)
+    credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type, Accept, Authorization',
+  });
+
+  // 2. Límites de carga
   const express = require('express');
   app.use(express.json({ limit: '15mb' }));
   app.use(express.urlencoded({ limit: '15mb', extended: true }));
-
-  app.enableCors({
-    origin: (origin, callback) => {
-      // Permitir: localhost (dev), Railway (prod), y Capacitor (mobile)
-      const allowedOrigins = [
-        'http://localhost:5173',
-        'http://localhost:3000',
-        'https://pastibot-fronted.vercel.app', // Ejemplo si usas vercel
-        /^capacitor:\/\/localhost$/,
-        /^http:\/\/localhost$/,
-        'https://localhost', // 🟢 REQUERIDO para Android APK (androidScheme: 'https')
-        'https://pastibotbackend-production.up.railway.app'
-      ];
-
-      if (!origin || allowedOrigins.some(o => typeof o === 'string' ? o === origin : o.test(origin))) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: true,
-  });
 
 
   const port = process.env.PORT || 3000;
