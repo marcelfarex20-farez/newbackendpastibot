@@ -12,9 +12,9 @@ export class FirebaseService implements OnModuleInit {
             if (admin.apps.length === 0) {
                 console.log('🏗️ Iniciando carga de credenciales de Firebase...');
 
-                let privateKey = process.env.FIREBASE_PRIVATE_KEY;
-                const projectId = process.env.FIREBASE_PROJECT_ID;
-                const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+                let privateKey = process.env.FIREBASE_PRIVATE_KEY?.trim();
+                const projectId = process.env.FIREBASE_PROJECT_ID?.trim();
+                const clientEmail = process.env.FIREBASE_CLIENT_EMAIL?.trim();
 
                 if (!privateKey || !projectId || !clientEmail) {
                     console.error('❌ ERROR: Faltan variables de entorno críticas de Firebase en Railway.');

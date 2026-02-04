@@ -306,9 +306,11 @@ export class AuthService {
       }
 
       return await this.buildAuthResponse(user);
-    } catch (err) {
+    } catch (err: any) {
       console.error('❌ Error en firebaseLogin:', err);
-      throw new UnauthorizedException('Autenticación de Firebase fallida');
+      // Incluimos el mensaje original de Firebase para diagnóstico
+      const detailedMessage = err?.message || 'Error desconocido';
+      throw new UnauthorizedException(`Autenticación de Firebase fallida: ${detailedMessage}`);
     }
   }
 

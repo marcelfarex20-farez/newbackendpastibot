@@ -3,18 +3,39 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-    console.log('--- ACTUALIZACIÓN DE SERIALES ---');
+    console.log('--- ACTUALIZACIÓN DE DATOS PASTIBOT ---');
 
-    // Actualizar todos los pacientes para que tengan el serial correcto
-    const result = await (prisma as any).patient.updateMany({
+    // 1. Asegurar Serial en todos los pacientes
+    const patientResult = await (prisma as any).patient.updateMany({
         data: {
             robotSerialNumber: 'esp32pastibot'
         }
     });
+    console.log(`✅ ${patientResult.count} pacientes vinculados a "esp32pastibot".`);
 
-    console.log(`✅ Se actualizaron ${result.count} registros de pacientes.`);
+    // 2. Reparar medicinas sin Slot (Carril)
+    // Buscamos medicinas que tengan slot null o 0
+    const medsToFix = await (prisma as any).medicine.findMany({
+        where: {
+            OR: [
+                { slot: null },
+                { slot: 0 }
+            ]
+        }
+    });
 
-    // También asegurar que el inventario por defecto existe
+    console.log(`🔍 Encontradas ${medsToFix.length} medicinas sin carril.`);
+
+    for (const med of medsToFix) {
+        // Asignamos un carril por defecto (ej. el 1) si no tiene
+        await (prisma as any).medicine.update({
+            where: { id: med.id },
+            data: { slot: 1 }
+        });
+        console.log(`   🔸 Medicina '${med.name}' (ID ${med.id}) asignada al Carril 1`);
+    }
+
+    // 3. Asegurar inventario base
     for (let slot = 1; slot <= 4; slot++) {
         await (prisma as any).robotInventory.upsert({
             where: {
@@ -27,12 +48,13 @@ async function main() {
             create: {
                 serialNumber: 'esp32pastibot',
                 slot: slot,
-                medicineName: `Medicina carril ${slot}`
+                medicineName: `Medicina Carril ${slot}`
             }
         });
     }
 
-    console.log('✅ Inventario base asegurado para "esp32pastibot".');
+    console.log('✅ Inventario base sincronizado.');
+    console.log('\n--- PROCESO COMPLETADO ---');
     process.exit(0);
 }
 
