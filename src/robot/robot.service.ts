@@ -221,10 +221,9 @@ export class RobotService implements OnModuleInit {
   }
 
   async getLatestStatus(serialNumber?: string, user?: any) {
-    console.log(`[ROBOT] Pidiendo estado para ${serialNumber} (User: ${user?.email})`);
     let targetSerial = serialNumber;
 
-    // 🚀 INFERENCIA: Si no hay serial, lo buscamos en los pacientes del usuario
+    // 🚀 INFERENCIA SILENCIOSA: Si no hay serial, lo buscamos en los pacientes del usuario
     if (!targetSerial && user) {
       // 1. Si es CUIDADOR, busca su primer paciente con robot
       const patientWithRobot = await (this.prisma as any).patient.findFirst({
