@@ -3,6 +3,11 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   console.log('🚀 Pastibot Backend iniciando bootstrap...');
+
+  // 📂 DIAGNÓSTICO DE VARIABLES (Solo nombres, no valores por seguridad)
+  const envKeys = Object.keys(process.env);
+  console.log(`🔍 Variables detectadas (${envKeys.length}): ${envKeys.sort().join(', ')}`);
+
   const app = await NestFactory.create(AppModule);
 
   // 1. CORS primero!!!

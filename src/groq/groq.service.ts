@@ -6,18 +6,23 @@ import * as fs from 'fs';
 @Injectable()
 export class GroqService {
     private readonly logger = new Logger(GroqService.name);
-    private groq: Groq;
+    private groq: Groq | null;
 
     constructor(private configService: ConfigService) {
         const apiKey = this.configService.get<string>('GROQ_API_KEY');
 
         if (!apiKey) {
-            this.logger.warn('⚠️ GROQ_API_KEY no está configurada en el archivo .env');
+            this.logger.warn('⚠️ [GROQ_SERVICE] Alerta: GROQ_API_KEY no detectada. El chat de IA fallará.');
         }
 
-        this.groq = new Groq({
-            apiKey: apiKey,
-        });
+        // 🛡️ Prevenir crash si la clave es nula o vacía
+        if (apiKey && apiKey.trim() !== '') {
+            this.groq = new Groq({
+                apiKey: apiKey,
+            });
+        } else {
+            this.groq = null;
+        }
     }
 
     /**
@@ -30,6 +35,11 @@ export class GroqService {
         message: string,
         conversationHistory: Array<{ role: string; content: string }> = [],
     ): Promise<string> {
+        if (!this.groq) {
+            this.logger.error('❌ Chat intentado sin GROQ_API_KEY configurada.');
+            return 'Servicio de IA no disponible (Falta configuración).';
+        }
+
         try {
             this.logger.log(`📨 Enviando mensaje a GROQ: ${message.substring(0, 50)}...`);
 
