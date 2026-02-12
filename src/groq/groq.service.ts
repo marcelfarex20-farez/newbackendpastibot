@@ -77,9 +77,17 @@ export class GroqService {
             this.logger.log(`✅ Respuesta recibida de GROQ: ${response.substring(0, 50)}...`);
 
             return response;
-        } catch (error) {
-            this.logger.error('❌ Error al comunicarse con GROQ:', error);
-            throw new Error('No se pudo obtener respuesta del asistente de IA');
+        } catch (error: any) {
+            const errorMessage = error.response?.data?.error?.message || error.message || 'Error desconocido';
+            const statusCode = error.status || error.response?.status;
+
+            this.logger.error(`❌ Error al comunicarse con GROQ (Status ${statusCode}): ${errorMessage}`);
+
+            if (statusCode === 401) {
+                return 'Error de autenticación: La clave GROQ_API_KEY parece ser inválida.';
+            }
+
+            throw new Error(`No se pudo obtener respuesta del asistente de IA: ${errorMessage}`);
         }
     }
 
