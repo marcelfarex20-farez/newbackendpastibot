@@ -22,21 +22,24 @@ export class FirebaseService implements OnModuleInit {
                 }
 
                 // 🛡️ REGLA DE ORO PARA RAILWAY/NODE:
-                // Las claves privadas suelen venir con literal \n o con comillas accidentales.
-                let cleanedKey = privateKey
-                    .replace(/\\n/g, '\n') // Convertir literal \n en saltos de línea reales
-                    .replace(/^"/, '')      // Quitar comilla inicial
-                    .replace(/"$/, '');     // Quitar comilla final
+                // 1. Quitar todos los caracteres no base64 para detectar solo la "carne" de la clave
+                let body = privateKey
+                    .replace(/-----BEGIN PRIVATE KEY-----/gi, '')
+                    .replace(/-----END PRIVATE KEY-----/gi, '')
+                    .replace(/[^A-Za-z0-9+/=]/g, '');
 
-                // Si por alguna razón la clave no tiene los headers, los ponemos
-                if (!cleanedKey.includes('-----BEGIN PRIVATE KEY-----')) {
-                    cleanedKey = `-----BEGIN PRIVATE KEY-----\n${cleanedKey}\n-----END PRIVATE KEY-----\n`;
+                // 2. AUTO-REPARAR PADDING (Si falta un '=')
+                // A veces Railway corta el último '=' al final de la variable.
+                while (body.length % 4 !== 0) {
+                    body += '=';
                 }
 
-                console.log('🔍 Auditoría de Clave Firebase (V3):');
-                console.log(`- Longitud detectada: ${cleanedKey.length} caracteres`);
-                console.log(`- Inicio: ${cleanedKey.substring(0, 30)}...`);
-                console.log(`- Fin: ...${cleanedKey.substring(cleanedKey.length - 30)}`);
+                // 3. Re-formatear con headers para Nest/Firebase
+                const cleanedKey = `-----BEGIN PRIVATE KEY-----\n${body.match(/.{1,64}/g)?.join('\n')}\n-----END PRIVATE KEY-----\n`;
+
+                console.log('🔍 Auditoría de Clave Firebase (V4 - AutoRepair):');
+                console.log(`- Longitud Base64: ${body.length} caracteres`);
+                console.log(`- Formato PEM generado correctamente`);
 
                 if (cleanedKey.length < 1000) {
                     console.error('❌ ERROR: La clave parece demasiado corta. Revisa Railway.');
