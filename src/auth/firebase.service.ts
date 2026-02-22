@@ -21,29 +21,25 @@ export class FirebaseService implements OnModuleInit {
                     return false;
                 }
 
-                // ☢️ LIMPIEZA NUCLEAR (Indestructible)
-                // 1. Quitar las cabeceras/pies si existen para que no se mezclen con el base64
-                let body = privateKey
-                    .replace(/-----BEGIN PRIVATE KEY-----/gi, '')
-                    .replace(/-----END PRIVATE KEY-----/gi, '')
-                    .replace(/\\n/g, ''); // Quitar literal \n por si acaso
+                // 🛡️ REGLA DE ORO PARA RAILWAY/NODE:
+                // Las claves privadas suelen venir con literal \n o con comillas accidentales.
+                let cleanedKey = privateKey
+                    .replace(/\\n/g, '\n') // Convertir literal \n en saltos de línea reales
+                    .replace(/^"/, '')      // Quitar comilla inicial
+                    .replace(/"$/, '');     // Quitar comilla final
 
-                // 2. Extraer ÚNICAMENTE caracteres válidos de Base64 (A-Z, a-z, 0-9, +, /, =)
-                // Esto borra comillas, espacios, guiones de cabecera que hayan quedado, etc.
-                const pureBase64 = body.replace(/[^A-Za-z0-9+/=]/g, '');
+                // Si por alguna razón la clave no tiene los headers, los ponemos
+                if (!cleanedKey.includes('-----BEGIN PRIVATE KEY-----')) {
+                    cleanedKey = `-----BEGIN PRIVATE KEY-----\n${cleanedKey}\n-----END PRIVATE KEY-----\n`;
+                }
 
-                // 3. Formatear en bloques de 64 caracteres (estándar PEM estricto)
-                const chunks = pureBase64.match(/.{1,64}/g);
-                const cleanedKey = chunks
-                    ? `-----BEGIN PRIVATE KEY-----\n${chunks.join('\n')}\n-----END PRIVATE KEY-----\n`
-                    : '';
+                console.log('🔍 Auditoría de Clave Firebase (V3):');
+                console.log(`- Longitud detectada: ${cleanedKey.length} caracteres`);
+                console.log(`- Inicio: ${cleanedKey.substring(0, 30)}...`);
+                console.log(`- Fin: ...${cleanedKey.substring(cleanedKey.length - 30)}`);
 
-                console.log('🔍 Auditoría de Clave Firebase:');
-                console.log(`- Base64 detectado: ${pureBase64.substring(0, 20)}...[${pureBase64.length} chars]...${pureBase64.substring(pureBase64.length - 10)}`);
-                console.log(`- Longitud final PEM: ${cleanedKey.length}`);
-
-                if (pureBase64.length < 1500) {
-                    console.error('❌ ERROR: La clave parece demasiado corta o corrupta. Revisa Railway.');
+                if (cleanedKey.length < 1000) {
+                    console.error('❌ ERROR: La clave parece demasiado corta. Revisa Railway.');
                     return false;
                 }
 
