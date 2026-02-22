@@ -21,25 +21,21 @@ export class FirebaseService implements OnModuleInit {
                     return false;
                 }
 
-                // 🛡️ REGLA DE ORO PARA RAILWAY/NODE:
-                // 1. Quitar todos los caracteres no base64 para detectar solo la "carne" de la clave
-                let body = privateKey
-                    .replace(/-----BEGIN PRIVATE KEY-----/gi, '')
-                    .replace(/-----END PRIVATE KEY-----/gi, '')
-                    .replace(/[^A-Za-z0-9+/=]/g, '');
+                // 🛡️ REGLA DE ORO PARA RAILWAY:
+                // Las claves en Railway suelen venir con literal \n o rodeadas de comillas.
+                let cleanedKey = privateKey
+                    .replace(/\\n/g, '\n') // Convertir literal \n en saltos de línea reales
+                    .replace(/^"|"$/g, ''); // Quitar comillas accidentales al inicio/final
 
-                // 2. AUTO-REPARAR PADDING (Si falta un '=')
-                // A veces Railway corta el último '=' al final de la variable.
-                while (body.length % 4 !== 0) {
-                    body += '=';
+                // Si la clave no tiene los headers (raro, pero posible en Railway), los agregamos
+                if (!cleanedKey.includes('-----BEGIN PRIVATE KEY-----')) {
+                    cleanedKey = `-----BEGIN PRIVATE KEY-----\n${cleanedKey}\n-----END PRIVATE KEY-----\n`;
                 }
 
-                // 3. Re-formatear con headers para Nest/Firebase
-                const cleanedKey = `-----BEGIN PRIVATE KEY-----\n${body.match(/.{1,64}/g)?.join('\n')}\n-----END PRIVATE KEY-----\n`;
-
-                console.log('🔍 Auditoría de Clave Firebase (V4 - AutoRepair):');
-                console.log(`- Longitud Base64: ${body.length} caracteres`);
-                console.log(`- Formato PEM generado correctamente`);
+                console.log('🔍 Auditoría de Clave Firebase (V5 - Standard):');
+                console.log(`- Longitud final: ${cleanedKey.length} caracteres`);
+                console.log(`- Empieza con: ${cleanedKey.substring(0, 30)}...`);
+                console.log(`- Termina con: ...${cleanedKey.substring(cleanedKey.length - 30)}`);
 
                 if (cleanedKey.length < 1000) {
                     console.error('❌ ERROR: La clave parece demasiado corta. Revisa Railway.');
