@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 async function testStatusAPI() {
-    const baseURL = 'https://pastibotbackend-production.up.railway.app';
+    const API_URL = 'https://newbackendpastibot-production.up.railway.app';
     // Necesitamos un token válido. Como no lo tengo, voy a intentar ver si el endpoint es público o si falla con 401.
     // Pero mejor, voy a crear un script que use Prisma directamente para simular el servicio.
     console.log("Testing API endpoint locally via direct service call simulation...");

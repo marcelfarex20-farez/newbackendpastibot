@@ -4,34 +4,31 @@ import * as bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-    const password = 'pastibot2026';
+    const password = '123';
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Verificar si ya existe alguien con ese código para evitar el error P2002
-    const codeTaken = await prisma.user.findUnique({
-        where: { sharingCode: 'PASTIBOT' }
-    });
+    // 1. Limpiar todos los usuarios previos para asegurar cuidador único
+    await prisma.patient.deleteMany();
+    await prisma.user.deleteMany();
 
-    const caregiver = await prisma.user.upsert({
-        where: { email: 'cuidador@pastibot.com' },
-        update: {},
-        create: {
-            email: 'cuidador@pastibot.com',
-            name: 'Cuidador Principal',
+    const admin = await prisma.user.create({
+        data: {
+            email: 'admin',
+            name: 'Administrador Pastibot',
             password: hashedPassword,
             role: 'CUIDADOR',
             provider: 'email',
             verified: true,
             gender: 'Masculino',
-            bio: 'Cuidador principal del sistema Pastibot.',
-            photoUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Pastibot',
-            sharingCode: codeTaken ? undefined : 'PASTIBOT', // 👈 Solo lo asigna si está libre
+            bio: 'Único administrador y cuidador del sistema.',
+            photoUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin',
+            sharingCode: 'PASTIBOT',
         } as any,
     });
 
-    console.log('--- SEED COMPLETADO ---');
-    console.log('Usuario Cuidador Creado:');
-    console.log(`Email: ${caregiver.email}`);
+    console.log('--- SISTEMA REINICIADO ---');
+    console.log('Único Cuidador Creado:');
+    console.log(`Email/Usuario: ${admin.email}`);
     console.log(`Password: ${password}`);
     console.log('-----------------------');
 }

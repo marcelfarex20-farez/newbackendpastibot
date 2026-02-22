@@ -298,7 +298,7 @@ export class AuthService {
 
       if (!user) {
         // 🛡️ Solo el correo del dueño puede ser CUIDADOR
-        const primaryEmail = 'sagabayanthony19@gmail.com';
+        const primaryEmail = 'admin';
         const role = email === primaryEmail ? 'CUIDADOR' : 'PACIENTE';
 
         user = await this.prisma.user.create({
@@ -341,8 +341,8 @@ export class AuthService {
         });
       }
 
-      // 🛡️ REQUISITO DE ROL: Solo el dueño es CUIDADOR
-      const primaryEmail = 'sagabayanthony19@gmail.com';
+      // 🛡️ REQUISITO DE ROL: Solo el admin es CUIDADOR
+      const primaryEmail = 'admin';
       const finalRole = email === primaryEmail ? 'CUIDADOR' : 'PACIENTE';
 
       const user = await this.prisma.user.create({
